@@ -1,0 +1,6 @@
+/luarocks
+/lua_modules
+/.luarocks
+
+# UniDic 生成 TSV (git管理外。tools/build_lemma_dict.py で生成)
+/lemma.tsv

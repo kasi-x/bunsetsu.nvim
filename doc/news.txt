@@ -1,0 +1,7 @@
+# bunsetsu.nvim (2024-12-01)
+
+* 初版。TinySegmenter の Lua 移植と文節モデル 4 種 (knbc_bunsetu,
+  wpci_bunsetu, jeita, rwcp) を同梱。
+* nvim-spider 拡張: カーソル下が日本語なら文節移動、ASCII なら spider に委譲。
+* flash.nvim 拡張: 事前計算した文節一覧を matcher に渡しラベルジャンプ。
+* 一文モードと全文モード (編集時は変更行のみ再計算) を分離。

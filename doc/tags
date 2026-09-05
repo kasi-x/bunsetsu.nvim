@@ -1,0 +1,12 @@
+:BunsetsuSplit	bunsetsu.txt	/*:BunsetsuSplit*
+bunsetsu-backends	bunsetsu.txt	/*bunsetsu-backends*
+bunsetsu-command	bunsetsu.txt	/*bunsetsu-command*
+bunsetsu-config	bunsetsu.txt	/*bunsetsu-config*
+bunsetsu-contents	bunsetsu.txt	/*bunsetsu-contents*
+bunsetsu-develop	bunsetsu.txt	/*bunsetsu-develop*
+bunsetsu-flash	bunsetsu.txt	/*bunsetsu-flash*
+bunsetsu-full	bunsetsu.txt	/*bunsetsu-full*
+bunsetsu-install	bunsetsu.txt	/*bunsetsu-install*
+bunsetsu-overview	bunsetsu.txt	/*bunsetsu-overview*
+bunsetsu-spider	bunsetsu.txt	/*bunsetsu-spider*
+bunsetsu.nvim.txt	bunsetsu.txt	/*bunsetsu.nvim.txt*

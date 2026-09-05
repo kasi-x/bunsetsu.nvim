@@ -1,0 +1,63 @@
+describe("bunsetsu.tinysegmenter", function()
+  local tinysegmenter = require("bunsetsu._core.tinysegmenter")
+
+  describe("segment()", function()
+    it("splits an empty string into an empty table", function()
+      assert.are.same({}, tinysegmenter.segment({ BIAS = 0 }, ""))
+    end)
+
+    it("splits with the rwcp model (default word segmentation)", function()
+      local rwcp = require("bunsetsu.models.rwcp")
+      local result = tinysegmenter.segment(rwcp, "これは文章です。")
+      assert.are.same({ "これ", "は", "文章", "です", "。" }, result)
+    end)
+
+    it("splits with the knbc_bunsetu model (bunsetsu segmentation)", function()
+      local knbc = require("bunsetsu.models.knbc_bunsetu")
+      local result = tinysegmenter.segment(knbc, "これは文章です。")
+      -- 文節区切り: 「これは」「文章です。」
+      assert.are.same({ "これは", "文章です。" }, result)
+    end)
+
+    it("segments mixed ascii/japanese text", function()
+      local rwcp = require("bunsetsu.models.rwcp")
+      local result = tinysegmenter.segment(rwcp, "Vimはエディタです。")
+      assert.is.not_nil(result)
+      assert.is.truthy(#result > 1)
+      assert.are.equal("Vim", result[1])
+    end)
+
+    it("segments the classic plum example", function()
+      local rwcp = require("bunsetsu.models.rwcp")
+      local result = tinysegmenter.segment(rwcp, "すもももももももものうち")
+      assert.are.same(
+        { "すも", "も", "も", "も", "も", "も", "も", "もの", "うち" },
+        result
+      )
+    end)
+
+    it("handles numbers", function()
+      local rwcp = require("bunsetsu.models.rwcp")
+      local result = tinysegmenter.segment(rwcp, "2020年")
+      assert.are.same({ "2", "0", "2", "0", "年" }, result)
+    end)
+  end)
+
+  describe("checkCharType()", function()
+    it("classifies hiragana as I", function()
+      assert.are.equal("I", tinysegmenter.checkCharType("あ"))
+    end)
+    it("classifies katakana as K", function()
+      assert.are.equal("K", tinysegmenter.checkCharType("ア"))
+    end)
+    it("classifies ascii letters as A", function()
+      assert.are.equal("A", tinysegmenter.checkCharType("a"))
+    end)
+    it("classifies ascii digits as N", function()
+      assert.are.equal("N", tinysegmenter.checkCharType("1"))
+    end)
+    it("classifies kanji as H", function()
+      assert.are.equal("H", tinysegmenter.checkCharType("文"))
+    end)
+  end)
+end)
