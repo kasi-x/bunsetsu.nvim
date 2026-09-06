@@ -55,6 +55,13 @@ function M.setup(opts)
   local buf_line_counts = {}
   -- undo/redo の検出用 (seq_cur が変わったら undo/redo)
   local buf_undo_seqs = {}
+  -- 日本語を含むバッファのみ追跡・再分割する。ASCII のみのバッファ
+  -- (コード等) では、TextChanged ごとの undotree() 呼び出し (undo ツリー
+  -- 全体の構築) が無駄に重いため、処理をすべてスキップする。
+  -- フラグはバッファ進入時などのみ更新するため、ASCII バッファに入力した
+  -- 日本語は次回進入時から対象になる (移動自体は full() が遅延計算するので
+  -- 常に動作する)。
+  local buf_is_jp = {}
 
   local function line_count_changed(buf)
     local cur = vim.api.nvim_buf_line_count(buf)
@@ -72,11 +79,26 @@ function M.setup(opts)
     return prev ~= nil and prev ~= cur
   end
 
+  ---バッファが日本語を含むかを更新する (先頭 500 行のみ走査)。
+  local function refresh_jp_flag(buf)
+    buf_is_jp[buf] = false
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, 500, false)
+    for _, line in ipairs(lines) do
+      if line:match("[ぁ-んァ-ヶー一-龠]") then
+        buf_is_jp[buf] = true
+        break
+      end
+    end
+  end
+
   vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
     group = augroup,
     pattern = "*",
     callback = function()
       local buf = vim.api.nvim_get_current_buf()
+      if not buf_is_jp[buf] then
+        return
+      end
       if line_count_changed(buf) or undo_occurred(buf) then
         -- 行数が変わった、または undo/redo → 全行再処理
         on_change()
@@ -102,14 +124,29 @@ function M.setup(opts)
     group = augroup,
     pattern = "*",
     callback = function()
+      local buf = vim.api.nvim_get_current_buf()
+      refresh_jp_flag(buf)
+      if not buf_is_jp[buf] then
+        return
+      end
       -- 全行キャッシュ破棄 + 全文をバックグラウンドで分割
       on_change()
       -- 品詞ハイライト (オプション)
-      apply_highlight(vim.api.nvim_get_current_buf())
+      apply_highlight(buf)
       -- 行数・undo 位置の追跡をリセット
-      local buf = vim.api.nvim_get_current_buf()
       buf_line_counts[buf] = vim.api.nvim_buf_line_count(buf)
       buf_undo_seqs[buf] = vim.fn.undotree().seq_cur
+    end,
+  })
+
+  -- バッファ削除時に追跡テーブルを片付ける
+  vim.api.nvim_create_autocmd("BufWipeout", {
+    group = augroup,
+    pattern = "*",
+    callback = function(event)
+      buf_line_counts[event.buf] = nil
+      buf_undo_seqs[event.buf] = nil
+      buf_is_jp[event.buf] = nil
     end,
   })
 
@@ -118,8 +155,8 @@ function M.setup(opts)
     group = augroup,
     pattern = "*",
     callback = function()
-      if hl_enabled then
-        local buf = vim.api.nvim_get_current_buf()
+      local buf = vim.api.nvim_get_current_buf()
+      if hl_enabled and buf_is_jp[buf] then
         -- 全文再ハイライトは重いので、デバウンスして行単位で更新
         apply_highlight(buf)
       end

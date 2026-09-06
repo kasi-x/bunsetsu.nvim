@@ -11,10 +11,16 @@ jobs:
     name: Luarocks Release
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-        if: env.LUAROCKS_API_KEY != null
+        uses: actions/checkout@v4
+        # secrets コンテキストは step レベルの if でのみ使える。
+        # API key を設定していない場合 (ローカルタグ配布のみ) はスキップする。
+        if: ${{ secrets.LUAROCKS_API_KEY != '' }}
       - name: Luarocks Upload
         uses: nvim-neorocks/luarocks-tag-release@v7
-        if: env.LUAROCKS_API_KEY != null
+        if: ${{ secrets.LUAROCKS_API_KEY != '' }}
         env:
           LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
+        with:
+          copy_directories: |
+            plugin
+            doc

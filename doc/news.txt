@@ -1,7 +1,13 @@
+# bunsetsu.nvim (2026-09-07) ver 1.0.0
+
+* 初回公開版。文節単位の移動 (nvim-spider / flash.nvim 拡張)、分かち書き
+  (:BunsetsuSplit)、辞書形・読み・品詞の取得 API、品詞ハイライト。
+* TinySegmenter の Lua 移植と文節モデル 4 種 (knbc_bunsetu, wpci_bunsetu,
+  jeita, rwcp) を同梱。追加バイナリなしでオフライン動作。
+* 任意で Vibrato / Vaporetto バックエンド (高精度 + 品詞・原形・読み) を利用可能。
+* lua-utf8 は任意 (無い場合はバイト単位フォールバック)。
+* 日本語を含まないバッファでは autocmd の追跡処理をスキップして軽量化。
+
 # bunsetsu.nvim (2024-12-01)
 
-* 初版。TinySegmenter の Lua 移植と文節モデル 4 種 (knbc_bunsetu,
-  wpci_bunsetu, jeita, rwcp) を同梱。
-* nvim-spider 拡張: カーソル下が日本語なら文節移動、ASCII なら spider に委譲。
-* flash.nvim 拡張: 事前計算した文節一覧を matcher に渡しラベルジャンプ。
-* 一文モードと全文モード (編集時は変更行のみ再計算) を分離。
+* 開発開始。TinySegmenter の Lua 移植と文節モデル 4 種を同梱。
