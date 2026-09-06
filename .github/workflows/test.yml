@@ -33,7 +33,7 @@ jobs:
           luaVersion: "${{ matrix.luaVersion }}"
 
       - name: Install LuaRocks
-        uses: luarocks/gh-actions-luarocks@v1
+        uses: luarocks/gh-actions-luarocks@v1.6.1
 
       - name: Install Dependencies
         run: |
