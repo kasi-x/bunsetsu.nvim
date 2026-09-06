@@ -11,12 +11,14 @@ function M.check()
 
   vim.health.start("bunsetsu.nvim")
 
-  -- lua-utf8 確認
+  -- lua-utf8 確認 (任意。無い場合はバイト単位の後方処理にフォールバック)
   local ok_utf8 = pcall(require, "lua-utf8")
   if ok_utf8 then
     vim.health.ok("lua-utf8 読み込みOK")
   else
-    vim.health.error("lua-utf8 がありません (luarocks install lua-utf8 または ~/.local/lib/lua/5.1/lua-utf8.so)")
+    vim.health.info(
+      "lua-utf8 がありません (任意。spider の後方移動 (b/ge) がバイト単位のフォールバックになります)"
+    )
   end
 
   -- Vibrato 確認

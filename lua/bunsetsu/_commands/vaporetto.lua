@@ -442,8 +442,24 @@ end
 ---@return boolean
 function M.is_particle(word)
   local particles = {
-    "は", "を", "に", "へ", "が", "と", "も", "で", "や", "か", "の",
-    "ね", "よ", "ぞ", "な", "わ", "ず", "ば",
+    "は",
+    "を",
+    "に",
+    "へ",
+    "が",
+    "と",
+    "も",
+    "で",
+    "や",
+    "か",
+    "の",
+    "ね",
+    "よ",
+    "ぞ",
+    "な",
+    "わ",
+    "ず",
+    "ば",
   }
   for _, p in ipairs(particles) do
     if word == p then

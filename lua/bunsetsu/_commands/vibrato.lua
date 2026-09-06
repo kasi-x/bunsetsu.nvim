@@ -15,11 +15,28 @@
 
 local config = require("bunsetsu._core.configuration")
 
--- lua-utf8 (必須)。spider も文字単位反転するため、これに合わせて使う。
+-- lua-utf8 (任意)。spider も文字単位反転するため、これに合わせて使う。
+-- 無い場合は spider と同じバイト反転にフォールバックする (UTF-8 は壊れるが、
+-- パターンは最低限動く)。
 local ok_utf8, lua_utf8 = pcall(require, "lua-utf8")
 if not ok_utf8 then
-  -- フォールバック: バイト反転 (UTF-8 は壊れるが、パターンは最低限動く)
-  lua_utf8 = { reverse = function(s) return s:reverse() end }
+  lua_utf8 = {
+    reverse = function(s)
+      return s:reverse()
+    end,
+    len = function(s)
+      return #s
+    end,
+    codes = function(s)
+      local i = 0
+      return function()
+        i = i + 1
+        if i <= #s then
+          return i, s:byte(i)
+        end
+      end
+    end,
+  }
 end
 
 local M = {}
@@ -372,7 +389,8 @@ function M.tokenize_async(lines, on_done)
         pcall(timer.close, timer)
         while received < expected do
           local item = lines[received + 1]
-          results[received + 1] = { lnum = item.lnum, line = item.line, words = {}, positions = {}, infos = {} }
+          results[received + 1] =
+            { lnum = item.lnum, line = item.line, words = {}, positions = {}, infos = {} }
           received = received + 1
         end
         on_done(results)

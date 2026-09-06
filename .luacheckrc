@@ -4,6 +4,7 @@ ignore = {
   "212",    -- unused argument
   "213",    -- unused loop variable
   "214",    -- unused local variable
+  "542",    -- empty if branch (スキップを意図した分岐を許容)
 }
 read_globals = {
   "vim",

@@ -5,16 +5,10 @@
 ---
 --- bunsetsu.nvim は nvim-spider と flash.nvim の日本語文節拡張を提供する。
 
--- lua-utf8 を必須にする (UTF-8 の文字単位処理に利用)。spider も
--- これを認識すると文字位置ベースで動作する。
-package.cpath = package.cpath .. ";" .. vim.fn.expand("~/.local/lib/lua/5.1/?.so")
-local ok_utf8, lua_utf8 = pcall(require, "lua-utf8")
-if not ok_utf8 then
-  vim.notify(
-    "bunsetsu.nvim: lua-utf8 が必要です (luarocks install lua-utf8)",
-    vim.log.levels.ERROR
-  )
-end
+-- lua-utf8 があれば読み込んで spider からも使えるようにする (任意依存)。
+-- 無い場合は文字単位でなくバイト単位の後方処理にフォールバックする
+-- (vibrato.lua も spider と同じ挙動にフォールバックする)。
+pcall(require, "lua-utf8")
 
 local configuration = require("bunsetsu._core.configuration")
 local full = require("bunsetsu._commands.full")
@@ -37,7 +31,9 @@ function M.setup(opts)
   -- TextChanged 系は変更行のみ非同期で再分割する。
   -- 行数が変わる可能性のある操作 (undo/redo 等) では全破棄する。
   local model_name = function()
-    return configuration.DATA.vibrato.dict or configuration.DATA.vaporetto.model or configuration.DATA.model
+    return configuration.DATA.vibrato.dict
+      or configuration.DATA.vaporetto.model
+      or configuration.DATA.model
   end
 
   local function on_change(lnum)
@@ -156,8 +152,7 @@ end
 function M.split_lines(line1, line2)
   local sep = configuration.DATA.splitsep
   local vibrato = require("bunsetsu._commands.vibrato")
-  local use_vibrato = configuration.DATA.vibrato
-    and configuration.DATA.vibrato.dict ~= ""
+  local use_vibrato = configuration.DATA.vibrato and configuration.DATA.vibrato.dict ~= ""
   for lnum = line1, line2 do
     local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, false)[1] or ""
     local segs = {}
