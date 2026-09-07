@@ -94,17 +94,19 @@ nvim-spider の customPatterns に bunsetsu の境界関数を登録すると、
     require("spider").setup({
         consistentOperatorPending = true,
         customPatterns = {
-            patterns = { require("bunsetsu._commands.spider").pattern },
+            -- 設定からバックエンドを自動選択する
+            -- (vibrato 辞書 > vaporetto モデル > 同梱 TinySegmenter)
+            patterns = { require("bunsetsu").pattern("bunsetsu") },
             overrideDefault = false,
         },
     })
 <
 
-外部トークナイザの分割結果を使いたい場合は、Vibrato / Vaporetto 版の
-パターン関数を代わりに登録します。
+mode は "word" (単語境界) または "bunsetsu" (助詞を結合して文節境界)。
+バックエンドを明示したい場合は vibrato_pattern() / vaporetto_pattern() /
+`bunsetsu._commands.spider` の pattern を直接登録する。
 
 >lua
-    -- mode: "word" (単語境界) または "bunsetsu" (助詞を結合して文節境界)
     require("bunsetsu").vibrato_pattern("bunsetsu")
     require("bunsetsu").vaporetto_pattern("bunsetsu")
 <

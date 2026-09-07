@@ -28,63 +28,21 @@ local fullcache = {}
 ---@type table<string, true>
 local known_models = {}
 
----単語・位置・品詞から文節 SegmentCol[] を組み立てる。
----助詞・助動詞 (品詞タグ) を前の語に結合して文節に近い境界を作る。
----@param words string[]
----@param positions number[]
----@param infos table[] 各語の詳細 { pos, lemma, reading }
----@return SegmentCol[]
-local function words_to_segments(words, positions, infos)
-  if #words == 0 then
-    return {}
-  end
-  local vibrato = require("bunsetsu._commands.vibrato")
-  local segcols = {}
-  local start_col = positions[1]
-  local end_col = positions[1] + #words[1] - 1
-  local seg_text = words[1]
-
-  for i = 2, #words do
-    local pos = infos and infos[i] and infos[i].pos or ""
-    if vibrato.is_particle(pos) then
-      -- 助詞を前の文節に結合
-      end_col = positions[i] + #words[i] - 1
-      seg_text = seg_text .. words[i]
-    else
-      segcols[#segcols + 1] = { segment = seg_text, col = start_col, colend = end_col }
-      start_col = positions[i]
-      end_col = positions[i] + #words[i] - 1
-      seg_text = words[i]
-    end
-  end
-  segcols[#segcols + 1] = { segment = seg_text, col = start_col, colend = end_col }
-
-  return segcols
-end
-
 ---Vibrato で行を文節分割して SegmentCol[] を返す。
+---助詞・助動詞の結合と splitpat の強制区切りは _core.segment に一任する。
 ---@param line string
 ---@return SegmentCol[]
 local function vibrato_segments(line)
   local vibrato = require("bunsetsu._commands.vibrato")
+  local segment = require("bunsetsu._core.segment")
   local words, infos = vibrato.tokenize_detailed(line)
-  -- 位置を計算
-  local positions = {}
-  local search_from = 1
-  for i, w in ipairs(words) do
-    local found = vim.fn.stridx(line, w, search_from - 1) + 1
-    if found <= 0 then
-      found = search_from
-    end
-    positions[i] = found
-    search_from = found + #w
-  end
-  return words_to_segments(words, positions, infos)
+  local positions = segment.word_positions(line, words)
+  return segment.words_to_segments(words, positions, infos)
 end
 
 ---外部トークナイザ (Vibrato) を使うかどうか。辞書未設定なら TinySegmenter。
 ---@return boolean
-local function use_vibrato()
+function M.use_vibrato()
   local config = require("bunsetsu._core.configuration")
   local dict = config.DATA.vibrato and config.DATA.vibrato.dict or ""
   return dict ~= ""
@@ -95,7 +53,7 @@ end
 ---@param line string
 ---@return SegmentCol[]
 local function line_segments(model_name, line)
-  if use_vibrato() then
+  if M.use_vibrato() then
     return vibrato_segments(line)
   end
   local seg = require("bunsetsu._core.segment")
@@ -158,7 +116,7 @@ function M.preload(model_name)
 
   -- TinySegmenter バックエンドは常駐プロセスが不要なため、
   -- 初回 full() 呼び出し時の分割で足りる (プリロード不要)。
-  if not use_vibrato() then
+  if not M.use_vibrato() then
     return
   end
 
@@ -174,12 +132,13 @@ function M.preload(model_name)
   end
 
   -- 非同期で全行を分割して linecache に保存する。
+  local segment = require("bunsetsu._core.segment")
   local vibrato = require("bunsetsu._commands.vibrato")
   vibrato.tokenize_async(jp_lines, function(results)
     -- results: { lnum = 行番号, words = string[], positions = number[] }[]
     linecache[model_name] = linecache[model_name] or {}
     for _, r in ipairs(results) do
-      local segcols = words_to_segments(r.words, r.positions, r.infos)
+      local segcols = segment.words_to_segments(r.words, r.positions, r.infos)
       linecache[model_name][r.lnum] = { line = r.line, segcols = segcols }
     end
     known_models[model_name] = true
@@ -270,7 +229,7 @@ function M.refresh_line(model_name, lnum)
   end
 
   -- TinySegmenter バックエンド: 純 Lua の分割なので同期で処理する
-  if not use_vibrato() then
+  if not M.use_vibrato() then
     local seg = require("bunsetsu._core.segment")
     local segcols = seg.split_line(model_name, line)
     linecache[model_name] = linecache[model_name] or {}
@@ -290,13 +249,14 @@ function M.refresh_line(model_name, lnum)
   end
 
   -- 非同期で1行だけ再分割
+  local segment = require("bunsetsu._core.segment")
   local vibrato = require("bunsetsu._commands.vibrato")
   vibrato.tokenize_async({ { lnum = lnum, line = line } }, function(results)
     linecache[model_name] = linecache[model_name] or {}
     local segcols = {}
     if #results > 0 then
       local r = results[1]
-      segcols = words_to_segments(r.words, r.positions, r.infos)
+      segcols = segment.words_to_segments(r.words, r.positions, r.infos)
     end
     linecache[model_name][lnum] = { line = line, segcols = segcols }
     fullcache[model_name] = nil -- フラット配列は必要時に再構築

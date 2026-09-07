@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `bunsetsu.pattern([mode])`: spider 用カスタムパターン関数を返す。
+  設定からバックエンドを自動選択する (vibrato 辞書 > vaporetto モデル >
+  同梱 TinySegmenter)
+- `bunsetsu.models()` が vaporetto も報告するようになった
+
+### Fixed
+
+- `splitpat` 設定が実際には無視されていた問題。シンプルな文字クラス
+  (例: `"[?!、。]"`, `"[、]"`) を解釈し、解釈できないパターンは既定値に
+  フォールバックする。`:BunsetsuSplit` と Vibrato バックエンドの全文モード
+  にも splitpat が効くようになった
+- UniDic 辞書ファイルが読めない場合に `bunsetsu.lemma()` がエラーではなく
+  nil を返すようになった
+
+### Changed
+
+- 文節組み立てロジック (助詞結合・splitpat 強制区切り) を
+  `bunsetsu._core.segment` に統合し、full / spider / :BunsetsuSplit 間の
+  挙動を統一
+
 ## [1.0.0] - 2026-09-07
 
 初回公開版。

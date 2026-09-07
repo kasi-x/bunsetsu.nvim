@@ -12,6 +12,7 @@ local M = {}
 local cached = nil
 
 ---UniDic TSV を読み込む。初回のみファイルから読む。
+---ファイルが読めない場合は空の辞書として扱う (lookup が nil を返す)。
 ---@param path string TSV ファイルパス
 ---@return table<string, { lemma: string, reading: string, pos: string }>
 local function load(path)
@@ -19,13 +20,15 @@ local function load(path)
     return cached
   end
   cached = {}
-  local lines = vim.fn.readfile(path)
-  for _, line in ipairs(lines) do
-    local parts = vim.split(line, "\t", { plain = true })
-    if #parts == 4 then
-      local surface, lemma, reading, pos = parts[1], parts[2], parts[3], parts[4]
-      if surface ~= "" and not cached[surface] then
-        cached[surface] = { lemma = lemma, reading = reading, pos = pos }
+  local ok, lines = pcall(vim.fn.readfile, path)
+  if ok and lines then
+    for _, line in ipairs(lines) do
+      local parts = vim.split(line, "\t", { plain = true })
+      if #parts == 4 then
+        local surface, lemma, reading, pos = parts[1], parts[2], parts[3], parts[4]
+        if surface ~= "" and not cached[surface] then
+          cached[surface] = { lemma = lemma, reading = reading, pos = pos }
+        end
       end
     end
   end

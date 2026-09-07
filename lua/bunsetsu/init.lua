@@ -183,57 +183,69 @@ function M.highlight(enabled)
   hl.apply(buf, ns)
 end
 
----指定行を文節区切りで分かち書きして置換する (:BunsetsuSplit 相当)。
+---指定範囲を文節区切りで分かち書きして置換する (:BunsetsuSplit 相当)。
 ---@param line1 number
 ---@param line2 number
 function M.split_lines(line1, line2)
   local sep = configuration.DATA.splitsep
-  local vibrato = require("bunsetsu._commands.vibrato")
-  local use_vibrato = configuration.DATA.vibrato and configuration.DATA.vibrato.dict ~= ""
+  local segment = require("bunsetsu._core.segment")
   for lnum = line1, line2 do
     local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, false)[1] or ""
-    local segs = {}
-    if use_vibrato then
+    local segcols
+    if full.use_vibrato() then
+      local vibrato = require("bunsetsu._commands.vibrato")
       local words, infos = vibrato.tokenize_detailed(line)
-      -- 助詞を前の語に結合して文節を作る
-      local buf = {}
-      for i, w in ipairs(words) do
-        local pos = infos[i] and infos[i].pos or ""
-        if i > 1 and vibrato.is_particle(pos) and #segs > 0 then
-          -- 助詞は前の文節に結合
-          buf[#buf + 1] = w
-        else
-          if #buf > 0 then
-            segs[#segs + 1] = table.concat(buf)
-          end
-          buf = { w }
-        end
-      end
-      if #buf > 0 then
-        segs[#segs + 1] = table.concat(buf)
-      end
+      local positions = segment.word_positions(line, words)
+      segcols = segment.words_to_segments(words, positions, infos)
     else
-      -- TinySegmenter バックエンド
-      local segment = require("bunsetsu._core.segment")
-      for _, sc in ipairs(segment.split_line(configuration.DATA.model, line)) do
-        segs[#segs + 1] = sc.segment
-      end
+      segcols = segment.split_line(configuration.DATA.model, line)
     end
-    vim.api.nvim_buf_set_lines(0, lnum - 1, lnum, false, { table.concat(segs, sep) })
+    if #segcols > 0 then
+      local segs = {}
+      for i, sc in ipairs(segcols) do
+        segs[i] = sc.segment
+      end
+      vim.api.nvim_buf_set_lines(0, lnum - 1, lnum, false, { table.concat(segs, sep) })
+    end
   end
   full.invalidate()
 end
 
 ---利用可能なバックエンドを返す。
----Vibrato 辞書が設定されていれば "vibrato" を含む。
+---tinysegmenter は常に利用可能 (同梱)。辞書/モデル設定があれば
+---vibrato / vaporetto も含む。
 ---@return string[]
 function M.models()
-  local ret = {}
-  local dict = configuration.DATA.vibrato.dict
-  if dict and dict ~= "" then
+  local ret = { "tinysegmenter" }
+  local vibrato_dict = configuration.DATA.vibrato and configuration.DATA.vibrato.dict or ""
+  local vaporetto_model = configuration.DATA.vaporetto and configuration.DATA.vaporetto.model or ""
+  if vibrato_dict ~= "" then
     ret[#ret + 1] = "vibrato"
   end
+  if vaporetto_model ~= "" then
+    ret[#ret + 1] = "vaporetto"
+  end
   return ret
+end
+
+---nvim-spider 用カスタムパターン関数を返す。
+---設定に応じてバックエンドを自動選択する (vibrato 辞書 > vaporetto モデル >
+---同梱 TinySegmenter)。
+---
+---spider.setup({ customPatterns = { patterns = { bunsetsu.pattern("bunsetsu") }, overrideDefault = false } })
+---
+---@param mode "word"|"bunsetsu" 境界の粒度。word=単語境界、bunsetsu=助詞を結合して文節に近い境界
+---@return fun(line: string, searchOffset: number, key: string): number|false
+function M.pattern(mode)
+  mode = mode or "bunsetsu"
+  local vibrato_dict = configuration.DATA.vibrato and configuration.DATA.vibrato.dict or ""
+  local vaporetto_model = configuration.DATA.vaporetto and configuration.DATA.vaporetto.model or ""
+  if vibrato_dict ~= "" then
+    return require("bunsetsu._commands.vibrato").pattern(mode)
+  elseif vaporetto_model ~= "" then
+    return require("bunsetsu._commands.vaporetto").pattern(mode)
+  end
+  return require("bunsetsu._commands.spider").pattern
 end
 
 ---Vaporetto バックエンドの spider カスタムパターン関数を返す。
@@ -304,14 +316,11 @@ function M.lemma_under_cursor()
 
   -- 日本語: Vibrato で分割してカーソル位置を含む語を特定
   local vibrato = require("bunsetsu._commands.vibrato")
+  local segment = require("bunsetsu._core.segment")
   local words, infos = vibrato.tokenize_detailed(line)
-  local search_from = 1
+  local positions = segment.word_positions(line, words)
   for i, word in ipairs(words) do
-    local found = vim.fn.stridx(line, word, search_from - 1) + 1
-    if found <= 0 then
-      found = search_from
-    end
-    local start_col = found
+    local start_col = positions[i]
     local end_col = start_col + #word - 1
     if cursor >= start_col and cursor <= end_col then
       local info = infos[i] or {}
@@ -322,7 +331,6 @@ function M.lemma_under_cursor()
         pos = info.pos or "",
       }
     end
-    search_from = found + #word
   end
   return nil
 end

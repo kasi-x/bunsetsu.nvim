@@ -62,13 +62,15 @@ Run `:checkhealth bunsetsu` to verify your setup.
 
 ### nvim-spider: phrase-wise `w` / `b` / `e` / `ge`
 
-Register the bundled TinySegmenter boundary function with spider:
+Register one boundary function with spider. `bunsetsu.pattern()` picks the best
+backend automatically (Vibrato when a dictionary is configured, then Vaporetto,
+then the bundled TinySegmenter):
 
 ```lua
 require("spider").setup({
     consistentOperatorPending = true,
     customPatterns = {
-        patterns = { require("bunsetsu._commands.spider").pattern },
+        patterns = { require("bunsetsu").pattern("bunsetsu") },
         overrideDefault = false,
     },
 })
@@ -77,7 +79,7 @@ require("spider").setup({
 On mixed text like `This is 天堂 真矢。` the phrases become
 `This | is | 天堂 | 真矢。` and `w` moves `This` → `is` → `天堂` → `真矢。`.
 
-To use an external tokenizer's segmentation instead, register
+To pin a specific backend instead, use
 `require("bunsetsu").vibrato_pattern("bunsetsu")` or
 `require("bunsetsu").vaporetto_pattern("bunsetsu")` (mode `"word"` keeps word
 boundaries, `"bunsetsu"` merges particles/auxiliaries into the preceding word).
@@ -98,6 +100,7 @@ on mixed lines.
 | Command / API | Description |
 | --- | --- |
 | `:[range]BunsetsuSplit` | Replace the range with phrase-separated text (`splitsep`, default `" "`) |
+| `require("bunsetsu").pattern([mode])` | spider boundary function; picks the backend from the config (Vibrato > Vaporetto > TinySegmenter) |
 | `require("bunsetsu").full_segments()` | Whole-buffer segment list (`{ lnum, col, colend, idx, text }`) |
 | `require("bunsetsu").highlight([enabled])` | Toggle POS underline highlighting (Vibrato) |
 | `require("bunsetsu").lemma_under_cursor()` | `{ surface, lemma, reading, pos }` under the cursor (ASCII uses `<cword>`, Japanese uses Vibrato) |

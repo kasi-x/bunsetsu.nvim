@@ -87,4 +87,87 @@ describe("bunsetsu.full (full-text mode with incremental cache)", function()
     assert.is_not_nil(prv)
     assert.are.same("文章です。", prv.text)
   end)
+
+  describe("with the Vibrato backend (stubbed tokenizer)", function()
+    local config = require("bunsetsu._core.configuration")
+    local vibrato = require("bunsetsu._commands.vibrato")
+    local original_tokenize_detailed
+    local original_tokenize_async
+
+    before_each(function()
+      config.resolve_data({ vibrato = { dict = "/tmp/fake.dic" } })
+      full.invalidate()
+      original_tokenize_detailed = vibrato.tokenize_detailed
+      original_tokenize_async = vibrato.tokenize_async
+      vibrato.tokenize_detailed = function(line)
+        if line == "これは文章です。" then
+          return { "これ", "は", "文章", "です", "。" }, {
+            { pos = "名詞" },
+            { pos = "助詞" },
+            { pos = "名詞" },
+            { pos = "助動詞" },
+            { pos = "記号" },
+          }
+        end
+        return {}, {}
+      end
+      vibrato.tokenize_async = function(lines, on_done)
+        local results = {}
+        for _, item in ipairs(lines) do
+          local words, infos = vibrato.tokenize_detailed(item.line)
+          results[#results + 1] = {
+            lnum = item.lnum,
+            line = item.line,
+            words = words,
+            positions = segment.word_positions(item.line, words),
+            infos = infos,
+          }
+        end
+        on_done(results)
+      end
+    end)
+
+    after_each(function()
+      vibrato.tokenize_detailed = original_tokenize_detailed
+      vibrato.tokenize_async = original_tokenize_async
+      config.resolve_data({ vibrato = { dict = "" } })
+      full.invalidate()
+    end)
+
+    it("merges particles and keeps punctuation with the previous segment", function()
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "これは文章です。" })
+      local segs = full.full("knbc_bunsetu")
+      assert.are.same(
+        { "これは", "文章です。" },
+        vim.tbl_map(function(fs)
+          return fs.text
+        end, segs)
+      )
+      assert.are.same(1, segs[1].col)
+      assert.are.same(24, segs[2].colend)
+    end)
+
+    it("preload() caches async results", function()
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "これは文章です。" })
+      full.preload("knbc_bunsetu")
+      -- preload は linecache を埋め、full() はそれを使って組み立てる
+      local segs = full.full("knbc_bunsetu")
+      assert.are.same(
+        { "これは", "文章です。" },
+        vim.tbl_map(function(fs)
+          return fs.text
+        end, segs)
+      )
+    end)
+
+    it("refresh_line() re-segments only the given line", function()
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "これは文章です。" })
+      full.refresh_line("knbc_bunsetu", 1)
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "すもももももももものうち" })
+      full.refresh_line("knbc_bunsetu", 1)
+      -- スタブは未知の行を空で返すので segment は 0 個になる
+      local segs = full.full("knbc_bunsetu")
+      assert.are.same(0, #segs)
+    end)
+  end)
 end)

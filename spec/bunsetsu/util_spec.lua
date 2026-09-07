@@ -1,0 +1,61 @@
+describe("bunsetsu.util (pure Lua helpers)", function()
+  local util = require("bunsetsu._core.util")
+
+  describe("cursor_pos() / line_len() / at_line_end()", function()
+    it("converts 1-based byte col to cursor { lnum, col0 }", function()
+      assert.are.same({ 3, 9 }, util.cursor_pos(3, 10))
+    end)
+
+    it("reports byte length and line end", function()
+      local line = "これは" -- 9 bytes
+      assert.are.equal(9, util.line_len(line))
+      assert.is_true(util.at_line_end(line, 9))
+      assert.is_false(util.at_line_end(line, 8))
+    end)
+  end)
+
+  describe("next_non_space()", function()
+    it("skips ascii spaces", function()
+      assert.are.equal(3, util.next_non_space("  あ", 1))
+    end)
+
+    it("skips ideographic space (U+3000, 3 bytes)", function()
+      assert.are.equal(4, util.next_non_space("　x", 1))
+    end)
+
+    it("returns nil at end of line", function()
+      assert.is_nil(util.next_non_space("a  ", 2))
+    end)
+  end)
+
+  describe("prev_non_space()", function()
+    it("skips ascii spaces backward", function()
+      assert.are.equal(1, util.prev_non_space("a  b", 4))
+    end)
+
+    it("skips multibyte continuation bytes", function()
+      -- "あa": あ = 3 bytes (1-3), a = 4。col4 の前は 1 (あの先頭バイト)
+      assert.are.equal(1, util.prev_non_space("あa", 4))
+    end)
+
+    it("returns nil at start of line", function()
+      assert.is_nil(util.prev_non_space("abc", 1))
+    end)
+  end)
+
+  describe("line() / get_cursor() / set_cursor()", function()
+    it("reads the current buffer line", function()
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "テスト行" })
+      assert.are.equal("テスト行", util.line(1))
+      assert.are.equal("", util.line(99))
+    end)
+
+    it("round-trips the cursor position", function()
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "これは" })
+      util.set_cursor(1, 4)
+      local cur = util.get_cursor()
+      assert.are.equal(1, cur[1])
+      assert.are.equal(3, cur[2]) -- 0始まりバイト
+    end)
+  end)
+end)
