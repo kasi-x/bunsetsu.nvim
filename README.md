@@ -102,6 +102,13 @@ scripts. Japanese ends at 。！？… (trailing closing brackets like 」are
 included); English ends at `. ! ?` when followed by whitespace or end of line,
 so `3.14` and `U.S.A` are not treated as sentence ends.
 
+Indirect quotes are handled with a rule set inspired by
+[fast-bunkai](https://github.com/hotchpotch/fast-bunkai): the boundary after
+「…。」 is suppressed when the quote is followed by a connective
+(と言った / という / の / は / が / を …), so only the outer sentence end is
+detected in `彼は「そうだ。」と言った。`. All of this runs in pure Lua — no
+Rust/Python backend is required.
+
 ```lua
 vim.keymap.set("n", ")", function()
     require("bunsetsu").next_sentence_end(vim.v.count1)

@@ -18,6 +18,35 @@ M.END_CHARS = "。！？…"
 ---文末文字の直後に続いてよい閉じ括弧・引用符。
 M.CLOSERS = "」』）〕〉》\"'"
 
+---文末の直後にこれらの接続表現が続いたら、括弧の中の文末とみなさない。
+---「〜だ。」と言った / 「はい」という答え のような間接引用のための例外。
+---fast-bunkai (bunkai) の IndirectQuoteException と同じ発想だが、ここでは
+---「閉じ括弧の直後の文末」にのみ適用する (bunkai はすべての文末に適用する
+---ため「。とにかく…」のような普通の文も誤って抑制する。移動用途では
+---そちらの方が被害が大きい)。
+---長い順に並べること (prefix マッチのため)。
+M.QUOTE_CONTINUATIONS = {
+  "くらいです",
+  "くらいでし",
+  "ほどでし",
+  "くらいの",
+  "という",
+  "もあり",
+  "って",
+  "など",
+  "て",
+  "で",
+  "の",
+  "と",
+  "に",
+  "は",
+  "が",
+  "を",
+  "も",
+}
+---prefix マッチに必要な最大文字数。
+local QUOTE_LOOKAHEAD = 5
+
 ---ch が文末文字かどうか。
 ---@param ch string
 ---@return boolean
@@ -25,18 +54,36 @@ local function is_end_char(ch)
   return M.END_CHARS:find(ch, 1, true) ~= nil
 end
 
----ch が文末になり得る ASCII 記号かどうか。
----"." は直後に空白・行末が続く場合のみ (小数点・省略形を除外)。
+---chars[i..] が間接引用の接続表現で始まるかどうか。
+---@param chars string[]
+---@param i number
+---@return boolean
+local function starts_with_continuation(chars, i)
+  if not chars[i] then
+    return false
+  end
+  local lookahead = table.concat(chars, "", i, math.min(i + QUOTE_LOOKAHEAD - 1, #chars))
+  for _, p in ipairs(M.QUOTE_CONTINUATIONS) do
+    if lookahead:sub(1, #p) == p then
+      return true
+    end
+  end
+  return false
+end
+
+---ch が文末になり得る ASCII (半角) 記号かどうか。
+---"." と "．" は「直後に空白・行末 (または閉じ括弧の並びを挟んだ先の空白・
+---行末) が続く」場合のみ。小数点・省略形を誤検出しないため。
 ---"!" / "?" は常に文末。
 ---@param ch string
 ---@param next_ch string|nil 次の文字 (行末なら nil)
 ---@return boolean
 local function is_ascii_end(ch, next_ch)
-  if #ch ~= 1 then
-    return false
-  end
-  if ch == "." then
-    return next_ch == nil or next_ch == " " or next_ch == "\t"
+  if ch == "." or ch == "．" then
+    return next_ch == nil
+      or next_ch == " "
+      or next_ch == "\t"
+      or (M.CLOSERS:find(next_ch, 1, true) ~= nil)
   end
   return ch == "!" or ch == "?"
 end
@@ -86,7 +133,12 @@ function M.ends(line)
         end_i = j
         j = j + 1
       end
-      ends[#ends + 1] = offsets[end_i] + #chars[end_i] - 1
+      -- 間接引用: 「〜だ。」と言った のように、閉じ括弧の直後の文末が
+      -- 接続表現に続くときは文末としない (外側の文の文末だけが残る)
+      local is_quoted = end_i > i and is_closer(chars[end_i]) and not is_end_char(chars[end_i])
+      if not (is_quoted and starts_with_continuation(chars, j)) then
+        ends[#ends + 1] = offsets[end_i] + #chars[end_i] - 1
+      end
       i = j
     else
       i = i + 1

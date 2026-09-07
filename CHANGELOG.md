@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   日本語の文末文字 (。！？…、直後の閉じ括弧も含む) と英語の文末記号
   (. ! ? は直後に空白・行末が続く場合のみ。"3.14" や "U.S.A" は誤検出しない)
   を判定し、混在文書でも文末ずつ移動できる
+- 間接引用の例外 (fast-bunkai / bunkai の IndirectQuoteException を参考にした
+  純 Lua 実装): 「〜だ。」と言った のように、閉じ括弧直後の文末が接続表現
+  (と言った / という / は / が / を など) に続くときは内側を文末としない。
+  外部の Rust/Python ランタイムは不要
 - `_core.lang`: 日本語/英語判定モジュール
   (`has_japanese` / `jp_count` / `ascii_letter_count` / `script`)。
   プラグイン内の日本語判定をここに統一

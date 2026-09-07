@@ -25,6 +25,45 @@ describe("bunsetsu.sentence (sentence end detection)", function()
     end)
   end)
 
+  describe("ends() with indirect quotes (bunkai-style exception)", function()
+    it("does not end inside a quoted sentence followed by と言った", function()
+      -- 内側の 。」は文末ではない。外側の文末 (最後の 。) だけが残る
+      local line = "彼は「そうだ。」と言った。"
+      assert.are.same({ #line }, sentence.ends(line))
+    end)
+
+    it("does not end inside a quoted noun phrase followed by という", function()
+      local line = "「はい」という答え。"
+      assert.are.same({ #line }, sentence.ends(line))
+    end)
+
+    it("keeps boundaries when the quote is not a quote-phrase", function()
+      -- 「終わり。」次。 は普通に 2 文末
+      assert.are.same({ 18, 24 }, sentence.ends("「終わり。」次。"))
+    end)
+
+    it("suppresses the inner boundary for quoted object phrases too", function()
+      -- 「はい。」をください。 → 「はい。」は目的語の引用句なので、
+      -- 文末は最後の 。 のみ (bunkai より積極的: を/は/が/も/で も接続扱い)
+      local line = "「はい。」をください。"
+      assert.are.same({ #line }, sentence.ends(line))
+    end)
+
+    it("does not suppress boundaries without a closing bracket", function()
+      -- bunkai は「。と…」も抑制するが、移動用途では抑制しない (意図的な差異)
+      local line = "今日は晴れ。とにかく出かけた。"
+      assert.are.same({ 18, #line }, sentence.ends(line))
+    end)
+  end)
+
+  describe("ends() with a period before closing quotes (english)", function()
+    it("ends after the closing quote when followed by whitespace", function()
+      local line = 'He said "Stop." Then we left.'
+      -- Stop." の " (15 バイト目) と文末
+      assert.are.same({ 15, #line }, sentence.ends(line))
+    end)
+  end)
+
   describe("ends() for english text", function()
     it("finds sentence ends followed by whitespace or line end", function()
       -- "Hello world. " = 13 bytes (.) at 12, "How are you?" = 12 bytes
