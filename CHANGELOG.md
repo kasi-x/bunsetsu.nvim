@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 文末移動: `bunsetsu.next_sentence_end()` / `bunsetsu.prev_sentence_end()`。
+  日本語の文末文字 (。！？…、直後の閉じ括弧も含む) と英語の文末記号
+  (. ! ? は直後に空白・行末が続く場合のみ。"3.14" や "U.S.A" は誤検出しない)
+  を判定し、混在文書でも文末ずつ移動できる
+- `_core.lang`: 日本語/英語判定モジュール
+  (`has_japanese` / `jp_count` / `ascii_letter_count` / `script`)。
+  プラグイン内の日本語判定をここに統一
 - `bunsetsu.pattern([mode])`: spider 用カスタムパターン関数を返す。
   設定からバックエンドを自動選択する (vibrato 辞書 > vaporetto モデル >
   同梱 TinySegmenter)

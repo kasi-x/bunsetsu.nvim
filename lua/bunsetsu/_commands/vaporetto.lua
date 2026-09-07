@@ -15,17 +15,16 @@ local config = require("bunsetsu._core.configuration")
 
 local M = {}
 
+local lang = require("bunsetsu._core.lang")
+
 -- M.is_particle への前方参照 (pattern 内で使用)
 local is_particle
-
--- 日本語判定 (かな・漢字)
-local JP = "[ぁ-んァ-ヶー一-龠]"
 
 ---日本語を含む行かどうか。
 ---@param line string
 ---@return boolean
 local function has_japanese(line)
-  return line:match(JP) ~= nil
+  return lang.has_japanese(line)
 end
 
 -- ---------------------------------------------------------------------------

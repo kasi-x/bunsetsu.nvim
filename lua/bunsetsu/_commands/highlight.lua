@@ -3,6 +3,8 @@
 ---Vibrato で分割した各語の品詞に応じて、アンダーラインで色を付ける。
 ---nvim_buf_set_extmark を使い、バッファの日本語部分だけを対象にする。
 
+local lang = require("bunsetsu._core.lang")
+
 local M = {}
 
 ---品詞大分類 → ハイライトグループのマッピング。
@@ -71,7 +73,7 @@ function M.apply(buf, namespace)
   -- 日本語を含む行だけを処理
   local tasks = {}
   for lnum, line in ipairs(lines) do
-    if line:match("[ぁ-んァ-ヶー一-龠]") then
+    if lang.has_japanese(line) then
       tasks[#tasks + 1] = { lnum = lnum, line = line }
     end
   end

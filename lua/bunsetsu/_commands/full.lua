@@ -7,6 +7,8 @@
 --   * フラットな FullSegment[] は `full()` 呼び出し時にキャッシュから組み立てる。
 --   * 編集時は `invalidate(lnum)` で該当行のキャッシュだけを破棄する。
 
+local lang = require("bunsetsu._core.lang")
+
 local M = {}
 
 ---@class FullSegment
@@ -123,7 +125,7 @@ function M.preload(model_name)
   -- 日本語を含む行だけを対象にする (ASCII のみは Vibrato 不要)
   local jp_lines = {} ---@type {lnum: number, line: string}[]
   for lnum, line in ipairs(lines) do
-    if line:match("[ぁ-んァ-ヶー一-龠]") then
+    if lang.has_japanese(line) then
       jp_lines[#jp_lines + 1] = { lnum = lnum, line = line }
     end
   end
@@ -240,7 +242,7 @@ function M.refresh_line(model_name, lnum)
   end
 
   -- 日本語を含まない行は空セグメントとしてキャッシュ
-  if not line:match("[ぁ-んァ-ヶー一-龠]") then
+  if not lang.has_japanese(line) then
     linecache[model_name] = linecache[model_name] or {}
     linecache[model_name][lnum] = { line = line, segcols = {} }
     fullcache[model_name] = nil

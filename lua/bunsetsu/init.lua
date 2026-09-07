@@ -12,6 +12,7 @@ pcall(require, "lua-utf8")
 
 local configuration = require("bunsetsu._core.configuration")
 local full = require("bunsetsu._commands.full")
+local lang = require("bunsetsu._core.lang")
 local lemma = require("bunsetsu._core.lemma")
 
 local M = {}
@@ -84,7 +85,7 @@ function M.setup(opts)
     buf_is_jp[buf] = false
     local lines = vim.api.nvim_buf_get_lines(buf, 0, 500, false)
     for _, line in ipairs(lines) do
-      if line:match("[ぁ-んァ-ヶー一-龠]") then
+      if lang.has_japanese(line) then
         buf_is_jp[buf] = true
         break
       end
@@ -268,6 +269,23 @@ function M.vibrato_pattern(mode)
   return require("bunsetsu._commands.vibrato").pattern(mode or "bunsetsu")
 end
 
+---次の文末へ移動する。
+---日本語 (。！？…) と英語 (. ! ? + 空白・行末) の文末を判定する
+---(_core.sentence)。文末が見つからなければカーソルは動かない。
+---カーソルが文末の上にある場合は、それより後ろの文末を探す。
+---@param count? number
+---@return boolean 移動したか
+function M.next_sentence_end(count)
+  return require("bunsetsu._commands.sentence").next_end(count or 1)
+end
+
+---前の文末へ移動する。
+---@param count? number
+---@return boolean 移動したか
+function M.prev_sentence_end(count)
+  return require("bunsetsu._commands.sentence").prev_end(count or 1)
+end
+
 ---デバッグ用: 設定内容を表示する。
 function M.show_config()
   print(vim.inspect(configuration.DATA))
@@ -306,7 +324,7 @@ function M.lemma_under_cursor()
   local cursor = vim.fn.col(".")
 
   -- 行に日本語 (かな・漢字) が無ければ ASCII とみなして cword を使う
-  if not line:match("[ぁ-んァ-ヶー一-龠]") then
+  if not lang.has_japanese(line) then
     local cword = vim.fn.expand("<cword>")
     if cword == "" then
       return nil
