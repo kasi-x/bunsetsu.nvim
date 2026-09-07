@@ -19,6 +19,8 @@ or [Vaporetto](https://github.com/daac-tools/vaporetto) tokenizers instead.
   delegate to nvim-spider
 - **flash.nvim integration** — precomputed phrase list as a flash matcher with
   labels, correct across mixed ASCII/Japanese lines
+- **Sentence-end motion** — move by sentence endings across Japanese (。！？…)
+  and English (`. ! ?`) text, with indirect-quote handling
 - **Two modes** — current-line segmentation for instant response, plus a
   whole-buffer mode that precomputes segments and recomputes only edited lines
 - **Resident-process backends** — Vibrato/Vaporetto run as sync + async jobs so
@@ -50,13 +52,8 @@ or [Vaporetto](https://github.com/daac-tools/vaporetto) tokenizers instead.
 }
 ```
 
-The plugin is also published on LuaRocks (see `bunsetsu-scm-1.rockspec`):
-
-```sh
-luarocks install bunsetsu.nvim --dev
-```
-
-Run `:checkhealth bunsetsu` to verify your setup.
+Run `:checkhealth bunsetsu` to verify your setup. Full documentation is
+available in the Vim help: `:h bunsetsu`.
 
 ## Usage
 
@@ -139,7 +136,8 @@ Configuration goes in `vim.g.bunsetsu_configuration`:
 vim.g.bunsetsu_configuration = {
     -- Phrase-segmentation model for the bundled TinySegmenter backend
     model = "knbc_bunsetu", -- knbc_bunsetu / wpci_bunsetu / jeita / rwcp
-    -- Force a phrase boundary after these characters
+    -- Force a phrase boundary after these characters.
+    -- A simple character class like [?!、。]; set to "" to disable
     splitpat = "[?!、。]",
     -- Separator inserted by :BunsetsuSplit
     splitsep = " ",
@@ -171,9 +169,19 @@ vim.g.bunsetsu_configuration = {
 - **TinySegmenter (default)** — the four bundled models segment offline, no
   setup needed. `model` selects between them.
 - **Vibrato** — morphological analysis (word split + POS + lemma + reading) via
-  the `vibrato tokenize` CLI and a MeCab-format dictionary (ipadic etc.). Set
-  `vibrato.dict` to enable; whole-buffer mode, `:BunsetsuSplit`, highlighting
-  and lemma lookup then run through it. Build with `cargo install vibrato`.
+  the `vibrato tokenize` CLI and a compiled dictionary. Set `vibrato.dict` to
+  enable; whole-buffer mode, `:BunsetsuSplit`, highlighting and lemma lookup
+  then run through it.
+
+  ```sh
+  git clone https://github.com/daac-tools/vibrato
+  cd vibrato
+  cargo build --release -p tokenize      # -> target/release/tokenize
+
+  # precompiled dictionaries are on the vibrato Releases page (e.g. ipadic):
+  wget https://github.com/daac-tools/vibrato/releases/download/v0.5.0/ipadic-mecab-2_7_0.tar.xz
+  tar xf ipadic-mecab-2_7_0.tar.xz
+  ```
 - **Vaporetto** — very fast pointwise-prediction tokenizer via the `predict`
   CLI:
 

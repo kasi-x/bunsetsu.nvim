@@ -9,9 +9,11 @@ CONTENTS                                                    *bunsetsu-contents*
 4. nvim-spider 統合.......................|bunsetsu-spider|
 5. バックエンド...........................|bunsetsu-backends|
 6. flash.nvim 統合........................|bunsetsu-flash|
-7. コマンド...............................|bunsetsu-command|
-8. 全文モード.............................|bunsetsu-full|
-9. 開発...................................|bunsetsu-develop|
+7. 文末移動...............................|bunsetsu-sentence|
+8. コマンド...............................|bunsetsu-command|
+9. Lua API................................|bunsetsu-api|
+10. 全文モード............................|bunsetsu-full|
+11. 開発..................................|bunsetsu-develop|
 
 ================================================================================
 1. 概要                                              *bunsetsu-overview*
@@ -28,6 +30,8 @@ TinySegmenter で学習した文節区切りモデル (knbc_bunsetu 等) を Lua
 - nvim-spider 拡張: customPatterns に境界関数を登録すると、w/b/e/ge が
   日本語上では文節移動・ASCII 上では nvim-spider の単語移動になります。
 - flash.nvim 拡張: 事前計算した文節一覧を matcher に渡し、文節へラベルジャンプ。
+- 文末移動: 日本語 (。！？…) と英語 (. ! ?) の文末を判定し、混在文書でも
+  文末ずつ移動できます (間接引用の例外つき)。
 - 一文モード (カーソル行のみ即時分割) と全文モード (バッファ全体を事前分割、
   編集時は変更行のみ再計算) を分離し、編集時のレスポンスを高速化。
 - 品詞ごとのアンダーライン表示、カーソル下の語の原形・読み・品詞取得
@@ -45,11 +49,6 @@ lazy.nvim: >lua
     }
 <
 
-LuaRocks にも公開しています (bunsetsu-scm-1.rockspec):
->
-    luarocks install bunsetsu.nvim --dev
-<
-
 :checkhealth bunsetsu で動作確認ができます。
 
 ================================================================================
@@ -57,29 +56,36 @@ LuaRocks にも公開しています (bunsetsu-scm-1.rockspec):
 
 設定は vim.g.bunsetsu_configuration にテーブルで渡します。
 
-|model|          文節区切りモデル名 (TinySegmenter バックエンド)。
+model            同梱 TinySegmenter バックエンドの文節区切りモデル名。
                  省略値: "knbc_bunsetu"
                  設定可能: "knbc_bunsetu" "wpci_bunsetu" "jeita" "rwcp"
-|splitpat|       強制的に分節区切りを入れるパターン。
+splitpat         強制的に分節区切りを入れる文字のパターン。シンプルな文字
+                 クラス '[...]' のみ解釈する (多バイト文字も可)。
+                 一致した文字は前の文節に残り、直後が強制境界になる。
+                 空文字列で無効化。解釈できないパターンは省略値に
+                 フォールバックする。
                  省略値: "[?!、。]"
-|splitsep|       :BunsetsuSplit の区切り文字列。
+splitsep         :BunsetsuSplit の区切り文字列。
                  省略値: " "
-|debounce|       全文キャッシュ無効化のデバウンス(ms)。
+debounce         全文キャッシュ無効化のデバウンス(ms)。
                  省略値: 50
-|vibrato|        Vibrato バックエンドの設定テーブル。
-                 - cmd: vibrato CLI のパス (省略値: "vibrato")
-                 - dict: MeCab 形式辞書のパス (空なら Vibrato 無効)
-|vaporetto|      Vaporetto バックエンドの設定テーブル。
+vibrato          Vibrato バックエンドの設定テーブル。
+                 - cmd: tokenize CLI のパス (省略値: "vibrato")
+                 - dict: 辞書 (.dic.zst) のパス (空なら Vibrato 無効)
+vaporetto        Vaporetto バックエンドの設定テーブル。
                  - cmd: predict CLI のパス (省略値: "predict")
-                 - model: Vaporetto モデル (.model.zst) のパス
-|lemma|          UniDic 辞書引きの設定テーブル。
+                 - model: モデル (.model.zst) のパス
+lemma            UniDic 辞書引きの設定テーブル。
                  - dict_path: surface<TAB>lemma<TAB>reading<TAB>pos の TSV
-|highlight|      品詞ハイライトの設定テーブル。
+highlight        品詞ハイライトの設定テーブル。
                  - enabled: true で有効化 (省略値: false)
 
 設定例: >lua
     vim.g.bunsetsu_configuration = {
-        model = "knbc_bunsetu",
+        vibrato = {
+            cmd = "/path/to/tokenize",
+            dict = "/path/to/system.dic.zst",
+        },
     }
 <
 
@@ -121,25 +127,32 @@ TinySegmenter (既定)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Vibrato~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Vibrato (https://github.com/daac-tools/vibrato) の tokenize CLI で
-形態素解析 (単語分割 + 品詞 + 原形 + 読み) を行います。MeCab 形式辞書
-(ipadic 等) を使用します。
+形態素解析 (単語分割 + 品詞 + 原形 + 読み) を行います。
 
 >sh
-    cargo install vibrato  # またはソースからビルド
+    git clone https://github.com/daac-tools/vibrato
+    cd vibrato
+    cargo build --release -p tokenize
+    # 実行ファイル: target/release/tokenize
+
+    # 辞書は vibrato の Releases から入手できる (例: mecab-ipadic)
+    wget https://github.com/daac-tools/vibrato/releases/download/v0.5.0/ipadic-mecab-2_7_0.tar.xz
+    tar xf ipadic-mecab-2_7_0.tar.xz
 <
 
 >lua
     vim.g.bunsetsu_configuration = {
         vibrato = {
-            cmd = "vibrato",
-            dict = "/path/to/ipadic-mecab-2_7_0.dic", -- 辞書の seed 辞書
+            cmd = "/path/to/vibrato/target/release/tokenize",
+            dict = "/path/to/ipadic-mecab-2_7_0/system.dic.zst",
         },
     }
 <
 
 vibrato.dict を設定すると全文モード・品詞ハイライト・:BunsetsuSplit が
 Vibrato を使うようになります。原形・読みは辞書出力に含まれるため、
-bunsetsu.lemma_under_cursor() は UniDic 辞書 (|lemma|) 無しで動作します。
+bunsetsu.lemma_under_cursor() は UniDic 辞書 (lemma.dict_path) 無しで
+動作します。
 
 Vaporetto~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Vaporetto (https://github.com/daac-tools/vaporetto) の predict CLI を
@@ -166,26 +179,6 @@ Vaporetto (https://github.com/daac-tools/vaporetto) の predict CLI を
     }
 <
 
-`bunsetsu.vaporetto_pattern(mode)` で spider のカスタムパターン関数を
-取得します:
->
-    -- 文節モード: 助詞 (は・を・に 等) を前の語に結合して文節に近い境界を作る
-    require("spider").setup({
-        consistentOperatorPending = true,
-        customPatterns = {
-            patterns = { require("bunsetsu").vaporetto_pattern("bunsetsu") },
-            overrideDefault = false,
-        },
-    })
-<
-
-- mode = "word": Vaporetto の単語分割をそのまま境界にする
-- mode = "bunsetsu": 助詞・助動詞を前の語に結合して文節に近い境界にする
-
-混在文章の例: `This is 天堂 真矢` のような ASCII と日本語が混ざった文章では、
-bunsetsu モードの境界は `This | is | 天堂 | 真矢` となり、`w` を押すと
-`This` → `is` → `天堂` → `真矢` の順に移動します。
-
 ================================================================================
 6. flash.nvim 統合                                       *bunsetsu-flash*
 
@@ -202,29 +195,91 @@ bunsetsu モードの境界は `This | is | 天堂 | 真矢` となり、`w` を
 flash のラベルが正しく付きます。
 
 ================================================================================
-7. コマンド                                              *bunsetsu-command*
+7. 文末移動                                              *bunsetsu-sentence*
+
+日本語 (。！？…) と英語 (. ! ? + 空白・行末) の文末を判定し、混在文書でも
+文末ずつ移動できます。カーソルが文末の上にある場合は、それより後ろ (前) の
+文末を探します。移動できたかどうかは戻り値 (boolean) で分かります。
+
+>lua
+    vim.keymap.set("n", ")", function()
+        require("bunsetsu").next_sentence_end(vim.v.count1)
+    end, { desc = "Next sentence end" })
+    vim.keymap.set("n", "(", function()
+        require("bunsetsu").prev_sentence_end(vim.v.count1)
+    end, { desc = "Previous sentence end" })
+<
+
+文末の判定規則:
+- 日本語: 。！？… が文末。直後の閉じ括弧・引用符 (」』） など) も文末に含む。
+  …… や !! の連続は 1 文末にまとまる。
+- 英語: . ! ? は直後に空白・行末が続く場合のみ文末。"3.14" や "U.S.A" は
+  文末とみなさない。Stop." のように閉じ引用符を挟んだ場合も文末。
+- 間接引用の例外: 「〜だ。」と言った のように、閉じ括弧の直後の文末が
+  接続表現 (と言った / という / の / は / が / を / って / など ... ) に
+  続くときは内側を文末としない (fast-bunkai / bunkai の
+  IndirectQuoteException を参考にした純 Lua 実装。外部ランタイム不要)。
+
+================================================================================
+8. コマンド                                              *bunsetsu-command*
 
 :[range]BunsetsuSplit                     *:BunsetsuSplit*
     指定行を文節で分かち書きした内容に置換する。文節の間に入れる文字は
-    |splitsep| で設定可能。
+    splitsep で設定可能。
 
 ================================================================================
-8. 全文モード                                              *bunsetsu-full*
+9. Lua API                                                *bunsetsu-api*
 
-バッファ全体を事前に分節化し、segment 位置の一覧を取得できます。
-flash.nvim 等のジャンプツールと組み合わせて使うための基盤です。
+require("bunsetsu") で公開している関数。
 
-- require("bunsetsu").full_segments() で segment 一覧を取得。
-- バッファ変更時は変更行のみ再計算し、高速にキャッシュを更新します。
-- 品詞ハイライト: require("bunsetsu").highlight([enabled]) で
-  カーソル行の形態素を品詞ごとにアンダーライン表示 (Vibrato 使用)。
-- 原形引き: require("bunsetsu").lemma_under_cursor() でカーソル下の語の
-  { surface, lemma, reading, pos } を返す (ASCII は cword、日本語は Vibrato)。
+pattern([{mode}])             spider 用カスタムパターン関数を返す。
+                              設定からバックエンドを自動選択する
+                              (vibrato > vaporetto > TinySegmenter)。
+                              mode: "word" | "bunsetsu" (省略値)。
+
+vibrato_pattern([{mode}])     Vibrato 版の境界関数を返す。
+vaporetto_pattern([{mode}])   Vaporetto 版の境界関数を返す。
+
+next_sentence_end([{count}])  次の文末へ移動する。
+prev_sentence_end([{count}])  前の文末へ移動する。
+                              戻り値: 移動したか (boolean)。|bunsetsu-sentence|
+
+full_segments()               全文モードの segment 一覧
+                              ({ lnum, col, colend, idx, text }) を返す。
+
+highlight([{enabled}])        品詞ごとのアンダーライン表示をトグルする
+                              (Vibrato)。
+
+lemma_under_cursor()          カーソル下の語の
+                              { surface, lemma, reading, pos } を返す。
+                              ASCII は cword、日本語は Vibrato で分割する。
+
+lemma({surface})              指定語の辞書形を UniDic TSV
+                              (lemma.dict_path) から引く。未設定・未登録時は
+                              nil。
+
+split_lines({line1}, {line2}) 指定範囲を分かち書きして置換する
+                              (:BunsetsuSplit 相当)。
+
+models()                      利用可能なバックエンド名の配列を返す
+                              (tinysegmenter は常に含まれる)。
 
 ================================================================================
-9. 開発                                                  *bunsetsu-develop*
+10. 全文モード                                          *bunsetsu-full*
 
-テスト実行: >bash
+バッファ全体を事前に分節化し、行単位でキャッシュする。
+編集時は変更行のみ再計算するため、大きなバッファでも移動がブロックしにくい。
+undo/redo や行数変化を検出した場合は全行を再処理する。
+
+`bunsetsu.setup()` が autocmd (BufReadPost / TextChanged 等) を設定し、
+バックグラウンドでキャッシュを更新する。日本語を含まないバッファでは
+autocmd の処理をすべてスキップするため、コード編集のオーバーヘッドは
+ほぼゼロ。
+
+================================================================================
+11. 開発                                                *bunsetsu-develop*
+
+テスト実行 (トークナイザ実バイナリは不要): >bash
     eval $(luarocks path --lua-version 5.1 --bin)
     busted .
 <
@@ -232,6 +287,10 @@ flash.nvim 等のジャンプツールと組み合わせて使うための基盤
 luacheck / stylua: >bash
     make luacheck
     make check-stylua
+<
+
+UniDic TSV 辞書 (lemma.tsv) の生成: >bash
+    make lemma LEMMA_CSV=lex_3_1.csv
 <
 
  vim:tw=78:ts=8:noet:ft=help:norl:

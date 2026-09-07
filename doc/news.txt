@@ -1,3 +1,14 @@
+# bunsetsu.nvim (Unreleased)
+
+* 文末移動: bunsetsu.next_sentence_end() / prev_sentence_end()。日本語
+  (。！？… + 閉じ括弧) と英語 (. ! ? + 空白・行末) の文末を判定し、混在文書
+  でも移動できる。間接引用の例外 (「〜だ。」と言った) は fast-bunkai を
+  参考にした純 Lua 実装。
+* bunsetsu.pattern(): 設定からバックエンドを自動選択する spider 用境界関数。
+* splitpat 設定が無視されていた問題を修正 (文字クラスを解釈)。
+* 日本語を含まないバッファでは autocmd の追跡をスキップして軽量化。
+* bunsetsu.lemma() が壊れた辞書でエラーにならないようになった。
+
 # bunsetsu.nvim (2026-09-07) ver 1.0.0
 
 * 初回公開版。文節単位の移動 (nvim-spider / flash.nvim 拡張)、分かち書き
