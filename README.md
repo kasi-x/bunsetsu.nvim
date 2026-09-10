@@ -61,7 +61,12 @@ available in the Vim help: `:h bunsetsu`.
 
 Register one boundary function with spider. `bunsetsu.pattern()` picks the best
 backend automatically (Vibrato when a dictionary is configured, then Vaporetto,
-then the bundled TinySegmenter):
+then the bundled TinySegmenter).
+
+**Requirement:** spider must accept *function patterns* in `customPatterns`
+(proposed upstream; until it is merged, install spider from a branch that
+includes it). `:checkhealth bunsetsu` reports whether your installed spider
+supports it:
 
 ```lua
 require("spider").setup({

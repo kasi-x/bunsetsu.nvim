@@ -89,4 +89,41 @@ describe("bunsetsu.spider (nvim-spider custom pattern for bunsetsu)", function()
       assert.are.same(24, spider.pattern(line, 16, "e"))
     end)
   end)
+  describe("supports_function_patterns()", function()
+    local spider_mod = require("bunsetsu._commands.spider")
+
+    after_each(function()
+      package.preload["spider.motion-logic"] = nil
+      package.loaded["spider.motion-logic"] = nil
+      package.preload["spider"] = nil
+      package.loaded["spider"] = nil
+    end)
+
+    it("returns false when nvim-spider is not installed", function()
+      assert.is_false(spider_mod.supports_function_patterns())
+    end)
+
+    it("detects a spider that accepts function patterns", function()
+      package.preload["spider.motion-logic"] = function()
+        return {
+          getNextPosition = function()
+            return false
+          end,
+        }
+      end
+      assert.is_true(spider_mod.supports_function_patterns())
+    end)
+
+    it("returns false for a spider that rejects function patterns", function()
+      package.preload["spider.motion-logic"] = function()
+        return {
+          getNextPosition = function(_, _, _, opts)
+            -- 旧 spider 相当: function パターンで文字列関数を呼んでエラー
+            error("bad argument #2 to 'find'")
+          end,
+        }
+      end
+      assert.is_false(spider_mod.supports_function_patterns())
+    end)
+  end)
 end)

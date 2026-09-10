@@ -21,6 +21,26 @@ function M.check()
     )
   end
 
+  -- nvim-spider 確認 (任意。customPatterns 経由の文節移動に使用)
+  if pcall(require, "spider") then
+    local spider = require("bunsetsu._commands.spider")
+    if spider.supports_function_patterns() then
+      vim.health.ok(
+        "nvim-spider: function patterns 対応 (bunsetsu の境界関数を登録できます)"
+      )
+    else
+      vim.health.warn(
+        "nvim-spider が function patterns に未対応です。bunsetsu.pattern() を"
+          .. " customPatterns に登録するには対応版の nvim-spider が必要です"
+          .. " (bunsetsu README の nvim-spider セクションを参照)"
+      )
+    end
+  else
+    vim.health.info(
+      "nvim-spider がありません (任意。spider 経由の文節移動を使う場合のみ必要)"
+    )
+  end
+
   -- Vibrato 確認
   local config = require("bunsetsu._core.configuration")
   local dict = config.DATA.vibrato.dict

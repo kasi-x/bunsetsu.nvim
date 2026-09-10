@@ -20,6 +20,33 @@ local segment = require("bunsetsu._core.segment")
 
 local M = {}
 
+---導入済みの nvim-spider が function patterns に対応しているか。
+---bunsetsu の境界関数を customPatterns に登録するには、関数を受け取れる
+---spider が必要 (本家には未マージの変更。非対応の spider では motion 時に
+---エラーになる)。
+---@return boolean
+function M.supports_function_patterns()
+  local ok, logic = pcall(require, "spider.motion-logic")
+  if not ok then
+    return false
+  end
+  -- function pattern を渡してエラーにならず、
+  -- 「マッチ無し」(false) が返れば対応している
+  local probe_ok, result = pcall(logic.getNextPosition, "probe", 1, "w", {
+    customPatterns = {
+      patterns = {
+        function()
+          return false
+        end,
+      },
+      overrideDefault = true,
+    },
+    subwordMovement = true,
+    skipInsignificantPunctuation = true,
+  })
+  return probe_ok and result == false
+end
+
 ---設定されたモデルで行を文節分割する。
 ---@param line string
 ---@return SegmentCol[]
