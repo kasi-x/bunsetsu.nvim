@@ -118,7 +118,39 @@ end, { desc = "Next sentence end" })
 vim.keymap.set("n", "(", function()
     require("bunsetsu").prev_sentence_end(vim.v.count1)
 end, { desc = "Previous sentence end" })
+
+-- operator support: `d)` / `c(` / `y2)` etc.
+vim.keymap.set("o", ")", function()
+    require("bunsetsu._commands.sentence").operator_next_end(vim.v.count1)
+end, { desc = "Next sentence end" })
+vim.keymap.set("o", "(", function()
+    require("bunsetsu._commands.sentence").operator_prev_end(vim.v.count1)
+end, { desc = "Previous sentence end" })
 ```
+
+### Text objects: sentence & phrase
+
+`is` / `as` select the inner / outer sentence, `iW` / `aW` the inner / outer
+phrase (bunsetsu) under the cursor — on Japanese and English text alike.
+Selection handling (`selection`, `virtualedit`, forced motions `v` / `V` /
+CTRL-V) is delegated to nvim-spider's `setEndpoints`, so text objects and
+operators behave exactly like spider motions:
+
+```lua
+local textobj = require("bunsetsu._commands.textobj")
+vim.keymap.set({ "x", "o" }, "is", function() textobj.sentence(false) end,
+    { desc = "bunsetsu: inner sentence" })
+vim.keymap.set({ "x", "o" }, "as", function() textobj.sentence(true) end,
+    { desc = "bunsetsu: sentence" })
+vim.keymap.set({ "x", "o" }, "iW", function() textobj.phrase(false) end,
+    { desc = "bunsetsu: inner bunsetsu" })
+vim.keymap.set({ "x", "o" }, "aW", function() textobj.phrase(true) end,
+    { desc = "bunsetsu: bunsetsu" })
+```
+
+With these mappings, `cis` edits a sentence, `daW` deletes a phrase with its
+trailing whitespace, and `yas` yanks a sentence — all based on the same
+Japanese-aware boundaries as the motions.
 
 ### Command and Lua API
 

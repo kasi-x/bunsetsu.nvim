@@ -64,10 +64,10 @@ local punct_set_cache = {}
 
 ---splitpat に対応する区切り文字集合を返す (キャッシュ付き)。
 ---解釈できないパターンは既定値 '[?!、。]' にフォールバックする。
----@param splitpat string
+---@param splitpat string|nil
 ---@return table<string, boolean>
 local function get_punct_set(splitpat)
-  if splitpat == "" then
+  if splitpat == nil or splitpat == "" then
     return {}
   end
   if punct_set_cache[splitpat] == nil then

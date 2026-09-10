@@ -78,6 +78,16 @@ local function get_line(model_name, lnum, line)
   return segcols
 end
 
+---現在バッファの指定行の segment 列情報を返す (キャッシュ使用)。
+---テキストオブジェクトなど、行単位の segment が必要な箇所向け。
+---@param model_name string
+---@param lnum number
+---@return SegmentCol[]
+function M.segcols(model_name, lnum)
+  local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, false)[1] or ""
+  return get_line(model_name, lnum, line)
+end
+
 ---バッファ全体を分節化して segment 位置一覧を返す (キャッシュ使用)。
 ---@param model_name string
 ---@return FullSegment[]

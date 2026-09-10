@@ -220,6 +220,31 @@ flash のラベルが正しく付きます。
   続くときは内側を文末としない (fast-bunkai / bunkai の
   IndirectQuoteException を参考にした純 Lua 実装。外部ランタイム不要)。
 
+operator-pending の `)` / `(` にも対応する。`d)` / `c(` / `y2)` のように
+オペレータと組み合わせて使える (範囲の確定は nvim-spider の setEndpoints
+経由)。
+
+>lua
+    vim.keymap.set("o", ")", function()
+        require("bunsetsu._commands.sentence").operator_next_end(vim.v.count1)
+    end, { desc = "Next sentence end" })
+    vim.keymap.set("o", "(", function()
+        require("bunsetsu._commands.sentence").operator_prev_end(vim.v.count1)
+    end, { desc = "Previous sentence end" })
+<
+
+テキストオブジェクト (選択範囲の確定は spider 経由):
+    is / as   カーソル下の文 (内側 / 外側。内側は文末文字を含まない)
+    iW / aW   カーソル下の文節 (外側は後続の空白を含める)
+
+>lua
+    local textobj = require("bunsetsu._commands.textobj")
+    vim.keymap.set({ "x", "o" }, "is", function() textobj.sentence(false) end)
+    vim.keymap.set({ "x", "o" }, "as", function() textobj.sentence(true) end)
+    vim.keymap.set({ "x", "o" }, "iW", function() textobj.phrase(false) end)
+    vim.keymap.set({ "x", "o" }, "aW", function() textobj.phrase(true) end)
+<
+
 ================================================================================
 8. コマンド                                              *bunsetsu-command*
 

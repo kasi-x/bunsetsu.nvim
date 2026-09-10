@@ -12,11 +12,11 @@ local util = require("bunsetsu._core.util")
 
 local M = {}
 
----count 個先の文末へカーソルを移動する。
+---count 個先の文末の位置を返す。
 ---カーソルが文末の上にあっても、それより後ろの文末を探す。
 ---@param count number
----@return boolean 移動したか
-function M.next_end(count)
+---@return { lnum: number, col: number }|nil
+function M.next_end_pos(count)
   local cur = util.get_cursor()
   local cur_lnum, cur_col = cur[1], cur[2] + 1
   local last = vim.api.nvim_buf_line_count(0)
@@ -27,20 +27,18 @@ function M.next_end(count)
       if lnum > cur_lnum or pos > cur_col then
         remaining = remaining - 1
         if remaining == 0 then
-          util.set_cursor(lnum, pos)
-          return true
+          return { lnum = lnum, col = pos }
         end
       end
     end
   end
-  return false
+  return nil
 end
 
----count 個前の文末へカーソルを移動する。
----カーソルが文末の上にあっても、それより前の文末を探す。
+---count 個前の文末の位置を返す。
 ---@param count number
----@return boolean 移動したか
-function M.prev_end(count)
+---@return { lnum: number, col: number }|nil
+function M.prev_end_pos(count)
   local cur = util.get_cursor()
   local cur_lnum, cur_col = cur[1], cur[2] + 1
 
@@ -52,13 +50,67 @@ function M.prev_end(count)
       if lnum < cur_lnum or pos < cur_col then
         remaining = remaining - 1
         if remaining == 0 then
-          util.set_cursor(lnum, pos)
-          return true
+          return { lnum = lnum, col = pos }
         end
       end
     end
   end
-  return false
+  return nil
+end
+
+---count 個先の文末へカーソルを移動する。
+---カーソルが文末の上にあっても、それより後ろの文末を探す。
+---@param count number
+---@return boolean 移動したか
+function M.next_end(count)
+  local target = M.next_end_pos(count)
+  if not target then
+    return false
+  end
+  util.set_cursor(target.lnum, target.col)
+  return true
+end
+
+---count 個前の文末へカーソルを移動する。
+---カーソルが文末の上にあっても、それより前の文末を探す。
+---@param count number
+---@return boolean 移動したか
+function M.prev_end(count)
+  local target = M.prev_end_pos(count)
+  if not target then
+    return false
+  end
+  util.set_cursor(target.lnum, target.col)
+  return true
+end
+
+---operator-pending 用: カーソルから count 個先の文末 (を含む) までの範囲を
+---operator に渡す。範囲の確定は nvim-spider の setEndpoints 経由。
+---カーソル移動はしない。
+---@param count number
+---@return boolean 範囲を確定できたか
+function M.operator_next_end(count)
+  local target = M.next_end_pos(count)
+  if not target then
+    return false
+  end
+  local cur = util.get_cursor()
+  local textobj = require("bunsetsu._commands.textobj")
+  return textobj.select_range(cur[1], cur[2] + 1, target.lnum, target.col, { inclusive = true })
+end
+
+---operator-pending 用: カーソルから count 個前の文末 (を含む) までの範囲を
+---operator に渡す。
+---@param count number
+---@return boolean 範囲を確定できたか
+function M.operator_prev_end(count)
+  local target = M.prev_end_pos(count)
+  if not target then
+    return false
+  end
+  local cur = util.get_cursor()
+  local textobj = require("bunsetsu._commands.textobj")
+  return textobj.select_range(target.lnum, target.col, cur[1], cur[2] + 1, { inclusive = true })
 end
 
 return M

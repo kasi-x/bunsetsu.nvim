@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- テキストオブジェクト: `bunsetsu._commands.textobj` の
+  `sentence(outer)` / `phrase(outer)`。`is` / `as` (文) と `iW` / `aW`
+  (文節) を日本語・英語どちらでも使える。選択範囲の確定 (selection /
+  virtualedit / 強制モーション) は nvim-spider の setEndpoints に委譲
+- 文末移動のオペレータ対応: `bunsetsu._commands.sentence` の
+  `operator_next_end()` / `operator_prev_end()`。`d)` / `c(` / `y2)` の
+  ように使える
 - 文末移動: `bunsetsu.next_sentence_end()` / `bunsetsu.prev_sentence_end()`。
   日本語の文末文字 (。！？…、直後の閉じ括弧も含む) と英語の文末記号
   (. ! ? は直後に空白・行末が続く場合のみ。"3.14" や "U.S.A" は誤検出しない)
