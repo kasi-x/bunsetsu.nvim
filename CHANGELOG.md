@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.1] - 2026-09-07
 
 ### Added
 
@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `debounce` 設定がコードから参照されていなかった問題。
+  TextChangedI の連続変更時に変更行の再分割を debounce 設定 (ms) で
+  まとめるように接続した
 - `splitpat` 設定が実際には無視されていた問題。シンプルな文字クラス
   (例: `"[?!、。]"`, `"[、]"`) を解釈し、解釈できないパターンは既定値に
   フォールバックする。`:BunsetsuSplit` と Vibrato バックエンドの全文モード
@@ -43,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- 未使用の util ヘルパ (line_len / at_line_end / set_cursor0) と
+  Makefile の未使用変数を削除
 - 文節組み立てロジック (助詞結合・splitpat 強制区切り) を
   `bunsetsu._core.segment` に統合し、full / spider / :BunsetsuSplit 間の
   挙動を統一

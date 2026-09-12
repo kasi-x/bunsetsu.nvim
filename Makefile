@@ -1,7 +1,5 @@
 .PHONY: test luacheck stylua check-stylua
 
-CONFIGURATION = .luarc.json
-
 test:
 	busted .
 

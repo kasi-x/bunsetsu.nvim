@@ -32,28 +32,6 @@ function M.set_cursor(lnum, col)
   vim.api.nvim_win_set_cursor(0, M.cursor_pos(lnum, col))
 end
 
----カーソルを移動する。col0 は 0始まりバイト位置。
----@param lnum number
----@param col0 number
-function M.set_cursor0(lnum, col0)
-  vim.api.nvim_win_set_cursor(0, { lnum, col0 })
-end
-
----行のバイト長を返す。Vim の col('$') は #line+1。
----@param line string
----@return number
-function M.line_len(line)
-  return #line
-end
-
----行末にカーソルがあるかどうか。col0 が行のバイト長と一致するとき行末。
----@param line string
----@param col0 number
----@return boolean
-function M.at_line_end(line, col0)
-  return col0 >= #line
-end
-
 ---ASCII 空白 (space, tab, \r, \n, \v, \f) かどうか
 ---@param b number バイト値
 ---@return boolean
@@ -105,19 +83,21 @@ function M.prev_non_space(line, col1)
   return nil
 end
 
----バッファ変更後に全文キャッシュを無効化する (デバウンス付き)。
----@param group number augroup id
----@param fn function 無効化処理
+---fn をデバウンスしつつ呼ぶ関数を返す。呼び出し引数は fn へそのまま渡る。
+---@param group number? augroup id (現状は未使用。将来的に autocmd 連携用)
+---@param fn function デバウンスして実行する処理
 ---@param debounce number ms
+---@return function
 function M.debounce(group, fn, debounce)
   local timer = vim.uv.new_timer()
-  return function()
+  return function(...)
     if timer:is_active() then
       timer:stop()
     end
+    local args = { ... }
     timer:start(debounce, 0, function()
       vim.schedule(function()
-        fn()
+        fn(unpack(args))
       end)
     end)
   end

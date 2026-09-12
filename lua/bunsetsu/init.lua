@@ -14,6 +14,7 @@ local configuration = require("bunsetsu._core.configuration")
 local full = require("bunsetsu._commands.full")
 local lang = require("bunsetsu._core.lang")
 local lemma = require("bunsetsu._core.lemma")
+local util = require("bunsetsu._core.util")
 
 local M = {}
 
@@ -39,10 +40,11 @@ function M.setup(opts)
 
   local function on_change(lnum)
     if lnum and lnum >= 1 then
-      -- 変更行のみ非同期で再分割してキャッシュ更新
-      vim.schedule(function()
+      -- 変更行のみ非同期で再分割してキャッシュ更新。
+      -- insert 中の連続変更 (TextChangedI) は debounce 設定 (ms) でまとめる
+      util.debounce(augroup, function()
         full.refresh_line(model_name(), lnum)
-      end)
+      end, configuration.DATA.debounce)()
     else
       -- 全行キャッシュ破棄 (次回 full() 時に再構築)
       full.invalidate()

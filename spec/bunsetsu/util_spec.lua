@@ -1,16 +1,9 @@
 describe("bunsetsu.util (pure Lua helpers)", function()
   local util = require("bunsetsu._core.util")
 
-  describe("cursor_pos() / line_len() / at_line_end()", function()
+  describe("cursor_pos()", function()
     it("converts 1-based byte col to cursor { lnum, col0 }", function()
       assert.are.same({ 3, 9 }, util.cursor_pos(3, 10))
-    end)
-
-    it("reports byte length and line end", function()
-      local line = "これは" -- 9 bytes
-      assert.are.equal(9, util.line_len(line))
-      assert.is_true(util.at_line_end(line, 9))
-      assert.is_false(util.at_line_end(line, 8))
     end)
   end)
 
