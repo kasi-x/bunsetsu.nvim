@@ -1,3 +1,8 @@
+if vim.fn.has("nvim-0.11") == 0 then
+  vim.api.nvim_err_writeln("bunsetsu.nvim requires Neovim 0.11 or later")
+  return
+end
+
 --- All `bunsetsu` command definitions.
 
 local configuration = require("bunsetsu._core.configuration")

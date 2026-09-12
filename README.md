@@ -1,5 +1,11 @@
 # bunsetsu.nvim
 
+[![Test](https://github.com/kasi-x/bunsetsu.nvim/actions/workflows/test.yml/badge.svg)](https://github.com/kasi-x/bunsetsu.nvim/actions/workflows/test.yml)
+[![Luacheck](https://github.com/kasi-x/bunsetsu.nvim/actions/workflows/luacheck.yml/badge.svg)](https://github.com/kasi-x/bunsetsu.nvim/actions/workflows/luacheck.yml)
+[![StyLua](https://github.com/kasi-x/bunsetsu.nvim/actions/workflows/stylua.yml/badge.svg)](https://github.com/kasi-x/bunsetsu.nvim/actions/workflows/stylua.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/kasi-x/bunsetsu.nvim)](https://github.com/kasi-x/bunsetsu.nvim/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 *Move by Japanese phrase units (文節, bunsetsu) in Neovim.*
 
 bunsetsu.nvim brings phrase-level motion and jumping to Japanese text. Instead of
