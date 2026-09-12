@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `setup()` 内で debounce 用タイマーをイベントのたびに生成しており、
+  デバウンスが機能していなかった問題。タイマーを setup 時に 1 回だけ
+  生成してイベント間で共有するようにした
+- `bunsetsu.lemma_under_cursor()` が Vibrato 未設定時に常に nil を返して
+  いた問題。同梱 TinySegmenter にフォールバックし、表層形を返す
+  (品詞・読みは空)
+
+### Changed
+
+- `:checkhealth bunsetsu` が Vibrato 未設定を警告ではなく情報として表示し、
+  同梱 TinySegmenter の分割テストを行うようにした
+
 ## [1.0.1] - 2026-09-07
 
 ### Added

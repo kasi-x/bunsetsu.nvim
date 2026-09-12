@@ -51,4 +51,36 @@ describe("bunsetsu.util (pure Lua helpers)", function()
       assert.are.equal(3, cur[2]) -- 0始まりバイト
     end)
   end)
+  describe("debounce()", function()
+    it("coalesces repeated calls into one run with the last arguments", function()
+      local calls = {}
+      local d = util.debounce(nil, function(x)
+        calls[#calls + 1] = x
+      end, 20)
+      d(1)
+      d(2)
+      d(3)
+      vim.wait(200, function()
+        return #calls > 0
+      end)
+      assert.are.equal(1, #calls) -- まとめられて 1 回だけ実行される
+      assert.are.equal(3, calls[1]) -- 最後の引数で実行される
+    end)
+
+    it("runs again for calls after the window", function()
+      local calls = {}
+      local d = util.debounce(nil, function(x)
+        calls[#calls + 1] = x
+      end, 10)
+      d(1)
+      vim.wait(200, function()
+        return #calls > 0
+      end)
+      d(2)
+      vim.wait(200, function()
+        return #calls > 1
+      end)
+      assert.are.same({ 1, 2 }, calls)
+    end)
+  end)
 end)

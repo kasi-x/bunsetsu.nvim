@@ -41,7 +41,7 @@ function M.check()
     )
   end
 
-  -- Vibrato 確認
+  -- トークナイザ確認 (Vibrato 未設定なら同梱 TinySegmenter を使用)
   local config = require("bunsetsu._core.configuration")
   local dict = config.DATA.vibrato.dict
   local cmd = config.DATA.vibrato.cmd or "vibrato"
@@ -56,22 +56,36 @@ function M.check()
     else
       vim.health.error(("Vibrato コマンドが見つかりません: %s"):format(cmd))
     end
-  else
-    vim.health.warn("Vibrato 辞書が未設定です")
-  end
 
-  -- 分割テスト
-  local vibrato = require("bunsetsu._commands.vibrato")
-  local words, infos = vibrato.tokenize_detailed("これは文章です。")
-  if #words > 0 then
-    local parts = {}
-    for i, w in ipairs(words) do
-      local lemma = infos[i] and infos[i].lemma or ""
-      parts[#parts + 1] = string.format("%s(%s)", w, lemma)
+    -- 分割テスト
+    local vibrato = require("bunsetsu._commands.vibrato")
+    local words, infos = vibrato.tokenize_detailed("これは文章です。")
+    if #words > 0 then
+      local parts = {}
+      for i, w in ipairs(words) do
+        local lemma = infos[i] and infos[i].lemma or ""
+        parts[#parts + 1] = string.format("%s(%s)", w, lemma)
+      end
+      vim.health.ok(("Vibrato 分割OK: %s"):format(table.concat(parts, " ")))
+    else
+      vim.health.warn("Vibrato が空の結果を返しました")
     end
-    vim.health.ok(("Vibrato 分割OK: %s"):format(table.concat(parts, " ")))
   else
-    vim.health.warn("Vibrato が空の結果を返しました")
+    vim.health.info("Vibrato 未設定 (同梱 TinySegmenter を使用します)")
+
+    local segment = require("bunsetsu._core.segment")
+    local segcols = segment.split_line(config.DATA.model, "これは文章です。")
+    if #segcols > 0 then
+      local parts = {}
+      for _, sc in ipairs(segcols) do
+        parts[#parts + 1] = sc.segment
+      end
+      vim.health.ok(("TinySegmenter 分割OK: %s"):format(table.concat(parts, " ")))
+    else
+      vim.health.error(
+        ("TinySegmenter が分割に失敗しました (model=%s)"):format(config.DATA.model)
+      )
+    end
   end
 end
 

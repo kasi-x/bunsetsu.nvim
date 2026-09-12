@@ -161,7 +161,7 @@ Japanese-aware boundaries as the motions.
 | `require("bunsetsu").full_segments()` | Whole-buffer segment list (`{ lnum, col, colend, idx, text }`) |
 | `require("bunsetsu").next_sentence_end([count])` / `prev_sentence_end([count])` | Move to the next / previous sentence end (returns whether the cursor moved) |
 | `require("bunsetsu").highlight([enabled])` | Toggle POS underline highlighting (Vibrato) |
-| `require("bunsetsu").lemma_under_cursor()` | `{ surface, lemma, reading, pos }` under the cursor (ASCII uses `<cword>`, Japanese uses Vibrato) |
+| `require("bunsetsu").lemma_under_cursor()` | `{ surface, lemma, reading, pos }` under the cursor (ASCII uses `<cword>`; Japanese uses Vibrato, or the bundled TinySegmenter with surface only) |
 | `require("bunsetsu").lemma(surface)` | UniDic lookup for a surface form (`lemma.dict_path` required) |
 | `require("bunsetsu").models()` | Configured backend names |
 

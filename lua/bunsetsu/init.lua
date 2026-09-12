@@ -38,13 +38,18 @@ function M.setup(opts)
       or configuration.DATA.model
   end
 
+  -- 変更行の再分割は debounce 設定 (ms) でまとめる。insert 中の連続変更
+  -- (TextChangedI) のたびにトークナイザへ投げないようにするため、タイマーは
+  -- setup 時に 1 回だけ生成してイベント間で共有する (イベント毎に生成すると
+  -- デバウンスにならず、timer オブジェクトも溜まる)。
+  local debounced_line_refresh = util.debounce(augroup, function(lnum)
+    full.refresh_line(model_name(), lnum)
+  end, configuration.DATA.debounce)
+
   local function on_change(lnum)
     if lnum and lnum >= 1 then
-      -- 変更行のみ非同期で再分割してキャッシュ更新。
-      -- insert 中の連続変更 (TextChangedI) は debounce 設定 (ms) でまとめる
-      util.debounce(augroup, function()
-        full.refresh_line(model_name(), lnum)
-      end, configuration.DATA.debounce)()
+      -- 変更行のみ非同期で再分割してキャッシュ更新
+      debounced_line_refresh(lnum)
     else
       -- 全行キャッシュ破棄 (次回 full() 時に再構築)
       full.invalidate()
@@ -312,9 +317,9 @@ end
 ---カーソル下の語の辞書形・読み・品詞を返す。
 ---
 ---カーソル位置の文字が ASCII なら Vim の cword を使う。
----日本語なら Vibrato で分割し、カーソル位置を含む語の原形を引く。
----Vibrato は原形・読み・品詞を直接出力するため、辞書引きは不要。
----返り値: { surface, lemma, reading, pos } | nil
+---日本語ならトークナイザで分割し、カーソル位置を含む語を返す。
+---Vibrato 設定時は品詞・原形・読みつき。未設定なら同梱 TinySegmenter に
+---フォールバックする (lemma = surface、pos / reading は空)。
 ---
 ---@return { surface: string, lemma: string, reading: string, pos: string } | nil
 function M.lemma_under_cursor()
@@ -334,22 +339,40 @@ function M.lemma_under_cursor()
     return { surface = cword, lemma = cword, reading = "", pos = "" }
   end
 
-  -- 日本語: Vibrato で分割してカーソル位置を含む語を特定
-  local vibrato = require("bunsetsu._commands.vibrato")
+  -- 日本語: トークナイザで分割してカーソル位置を含む語を特定
   local segment = require("bunsetsu._core.segment")
-  local words, infos = vibrato.tokenize_detailed(line)
-  local positions = segment.word_positions(line, words)
-  for i, word in ipairs(words) do
-    local start_col = positions[i]
-    local end_col = start_col + #word - 1
-    if cursor >= start_col and cursor <= end_col then
+  local tokens = {} ---@type { surface: string, start: number, pos: string, lemma: string, reading: string }[]
+
+  if full.use_vibrato() then
+    local vibrato = require("bunsetsu._commands.vibrato")
+    local words, infos = vibrato.tokenize_detailed(line)
+    local positions = segment.word_positions(line, words)
+    for i, word in ipairs(words) do
       local info = infos[i] or {}
-      return {
+      tokens[#tokens + 1] = {
         surface = word,
+        start = positions[i],
+        pos = info.pos or "",
         lemma = (info.lemma ~= "" and info.lemma) or word,
         reading = info.reading or "",
-        pos = info.pos or "",
       }
+    end
+  else
+    -- TinySegmenter フォールバック: 品詞情報は取れない (surface のみ)
+    for _, sc in ipairs(segment.segment_col_line(configuration.DATA.model, line)) do
+      tokens[#tokens + 1] = {
+        surface = sc.segment,
+        start = sc.col,
+        pos = "",
+        lemma = sc.segment,
+        reading = "",
+      }
+    end
+  end
+
+  for _, t in ipairs(tokens) do
+    if cursor >= t.start and cursor <= t.start + #t.surface - 1 then
+      return { surface = t.surface, lemma = t.lemma, reading = t.reading, pos = t.pos }
     end
   end
   return nil
