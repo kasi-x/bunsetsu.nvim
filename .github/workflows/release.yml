@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch: {} # LUAROCKS_API_KEY 登録後に手動で再配信できるようにする
 
 jobs:
   luarocks-release:

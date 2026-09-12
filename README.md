@@ -8,6 +8,8 @@
 
 *Move by Japanese phrase units (文節, bunsetsu) in Neovim.*
 
+![demo](.github/demo.gif)
+
 bunsetsu.nvim brings phrase-level motion and jumping to Japanese text. Instead of
 stopping at every character or word, `w` / `b` / `e` / `ge` land on phrase
 boundaries — 「これは」「文章です。」 — while ASCII text keeps normal word

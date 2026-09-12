@@ -42,6 +42,18 @@ make check-stylua    # check only
   the changelog ([Keep a Changelog](https://keepachangelog.com/en/1.0.0/))
   must be updated for user-visible changes.
 
+## Releasing
+
+1. Update `CHANGELOG.md` (move Unreleased to a new version section) and
+   `doc/news.txt`.
+2. Tag and push: `git tag -a vX.Y.Z && git push origin vX.Y.Z` — the Release
+   workflow uploads to LuaRocks **only when the `LUAROCKS_API_KEY` repository
+   secret is set**; otherwise the tag alone distributes the release.
+3. If the key is added later, re-run publishing via
+   *Actions → Release → Run workflow* (workflow_dispatch) or re-push the tag.
+4. Validate the rock locally first: `luarocks lint bunsetsu.nvim-scm-1.rockspec`
+   and `luarocks pack bunsetsu.nvim-scm-1.rockspec`.
+
 ## Design notes
 
 - Motion and jumping integrate with [nvim-spider](https://github.com/chrisgrieser/nvim-spider)
