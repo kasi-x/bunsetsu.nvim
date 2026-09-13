@@ -1,3 +1,12 @@
+# bunsetsu.nvim (2026-09-13) ver 1.1.0
+
+* 文末移動・テキストオブジェクト (is/as, iW/aW)・オペレータ対応を追加。
+  選択範囲の確定は nvim-spider の setEndpoints 経由。
+* 間接引用の例外 (「〜だ。」と言った) は fast-bunkai を参考にした純 Lua 実装。
+* bunsetsu.pattern(): 設定からバックエンドを自動選択する spider 用境界関数。
+* lemma_under_cursor() が Vibrato 未設定でも TinySegmenter にフォールバック。
+* デモ GIF を README に追加。
+
 # bunsetsu.nvim (2026-09-07) ver 1.0.1
 
 * 文末移動: bunsetsu.next_sentence_end() / prev_sentence_end()。日本語
