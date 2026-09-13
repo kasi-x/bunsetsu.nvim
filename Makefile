@@ -1,4 +1,6 @@
-.PHONY: test luacheck stylua check-stylua
+.PHONY: test luacheck stylua check-stylua ci
+
+ci: test luacheck check-stylua
 
 test:
 	busted .
