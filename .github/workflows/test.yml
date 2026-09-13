@@ -28,7 +28,7 @@ jobs:
           version: ${{ matrix.neovim }}
 
       - name: Install Lua
-        uses: luarocks/gh-actions-lua@v13
+        uses: luarocks/gh-actions-lua@v14
         with:
           luaVersion: "${{ matrix.luaVersion }}"
 
