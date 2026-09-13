@@ -26,7 +26,7 @@ describe("documentation consistency", function()
     local readme = table.concat(vim.fn.readfile("README.md"), "\n")
     assert.is_truthy(readme:find("kasi%-x/bunsetsu%.nvim"))
 
-    local rockspec = table.concat(vim.fn.readfile("bunsetsu-scm-1.rockspec"), "\n")
+    local rockspec = table.concat(vim.fn.readfile("bunsetsu.nvim-scm-1.rockspec"), "\n")
     assert.is_truthy(rockspec:find("github%.com/kasi%-x/bunsetsu%.nvim"))
   end)
 end)
