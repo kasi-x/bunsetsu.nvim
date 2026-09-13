@@ -5,11 +5,6 @@
 ---
 --- bunsetsu.nvim は nvim-spider と flash.nvim の日本語文節拡張を提供する。
 
--- lua-utf8 があれば読み込んで spider からも使えるようにする (任意依存)。
--- 無い場合は文字単位でなくバイト単位の後方処理にフォールバックする
--- (vibrato.lua も spider と同じ挙動にフォールバックする)。
-pcall(require, "lua-utf8")
-
 local configuration = require("bunsetsu._core.configuration")
 local full = require("bunsetsu._commands.full")
 local lang = require("bunsetsu._core.lang")

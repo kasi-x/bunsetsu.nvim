@@ -11,16 +11,6 @@ function M.check()
 
   vim.health.start("bunsetsu.nvim")
 
-  -- lua-utf8 確認 (任意。無い場合はバイト単位の後方処理にフォールバック)
-  local ok_utf8 = pcall(require, "lua-utf8")
-  if ok_utf8 then
-    vim.health.ok("lua-utf8 読み込みOK")
-  else
-    vim.health.info(
-      "lua-utf8 がありません (任意。spider の後方移動 (b/ge) がバイト単位のフォールバックになります)"
-    )
-  end
-
   -- nvim-spider 確認 (任意。customPatterns 経由の文節移動に使用)
   if pcall(require, "spider") then
     local spider = require("bunsetsu._commands.spider")

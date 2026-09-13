@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- spider の function patterns 契約に準拠: 境界関数は常に**元の行がバイト
+  座標**で渡され、移動方向が `backwards` フラグで渡されるようになった
+  (nvim-spider への PR で提案)。これにより lua-utf8 への依存を完全に削除。
+  vibrato / vaporetto / TinySegmenter の各パターン関数も大幅に簡素化
+
 ## [1.1.0] - 2026-09-13
 
 ### Fixed

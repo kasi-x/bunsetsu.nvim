@@ -15,30 +15,6 @@
 
 local config = require("bunsetsu._core.configuration")
 
--- lua-utf8 (任意)。spider も文字単位反転するため、これに合わせて使う。
--- 無い場合は spider と同じバイト反転にフォールバックする (UTF-8 は壊れるが、
--- パターンは最低限動く)。
-local ok_utf8, lua_utf8 = pcall(require, "lua-utf8")
-if not ok_utf8 then
-  lua_utf8 = {
-    reverse = function(s)
-      return s:reverse()
-    end,
-    len = function(s)
-      return #s
-    end,
-    codes = function(s)
-      local i = 0
-      return function()
-        i = i + 1
-        if i <= #s then
-          return i, s:byte(i)
-        end
-      end
-    end,
-  }
-end
-
 local M = {}
 
 local lang = require("bunsetsu._core.lang")
@@ -431,47 +407,27 @@ end
 
 ---Vibrato の分割結果を、spider の customPatterns に渡す境界関数に変換する。
 ---@param mode "word"|"bunsetsu" 境界の粒度
----@return fun(line: string, searchOffset: number, key: string): number|false
+---@return fun(line: string, searchOffset: number, key: string, backwards: boolean): number|false
 function M.pattern(mode)
   mode = mode or "word"
-  return function(line, searchOffset, key)
-    local backwards = key == "b" or key == "ge"
-
-    -- spider は backward のとき line を文字単位で反転して渡す (lua-utf8)。
-    -- lua_utf8.reverse で元の文字列に戻す。
-    local original = backwards and lua_utf8.reverse(line) or line
-
-    local words, positions, infos = get_words(original)
+  return function(line, searchOffset, key, backwards)
+    local words, positions, infos = get_words(line)
     if #words == 0 then
       return false
     end
 
-    -- 文節境界 (開始位置と終端位置)
-    -- バイト位置 → 文字位置に変換する (spider は lua-utf8 で文字位置ベース)。
-    -- lua_utf8.codes でバイト位置を走査し、文字インデックスを求める。
-    local function byte_to_char(byte_idx)
-      -- byte_idx は 1-based バイト。その文字の開始バイト位置を探す。
-      local char_idx = 1
-      for p, _ in lua_utf8.codes(original) do
-        if p >= byte_idx then
-          break
-        end
-        char_idx = char_idx + 1
-      end
-      return char_idx
-    end
-
+    -- 文節境界 (開始位置と終端位置)。位置はすべてバイト座標
     local boundaries = {}
     local boundaryEnds = {}
     for i in ipairs(words) do
       if mode == "bunsetsu" and i > 1 and is_particle(infos[i].pos) then
         if #boundaries > 0 then
-          -- 助詞を前の文節に結合: 終端を次の文字位置-1に更新
-          boundaryEnds[#boundaryEnds] = byte_to_char(positions[i] + #words[i]) - 1
+          -- 助詞を前の文節に結合: 終端を伸ばす
+          boundaryEnds[#boundaryEnds] = positions[i] + #words[i] - 1
         end
       else
-        boundaries[#boundaries + 1] = byte_to_char(positions[i])
-        boundaryEnds[#boundaryEnds + 1] = byte_to_char(positions[i] + #words[i]) - 1
+        boundaries[#boundaries + 1] = positions[i]
+        boundaryEnds[#boundaryEnds + 1] = positions[i] + #words[i] - 1
       end
     end
 
@@ -486,38 +442,22 @@ function M.pattern(mode)
       return boundaries[i]
     end
 
-    if backwards then
-      local candidates = {}
-      for i in ipairs(boundaries) do
-        local t = target(i)
-        local rev = lua_utf8.len(line) - t + 1
-        if rev > searchOffset then
-          candidates[#candidates + 1] = rev
+    -- 移動方向にある最も近い境界を返す (元の行のバイト座標)
+    local best
+    for i in ipairs(boundaries) do
+      local t = target(i)
+      if backwards then
+        if t < searchOffset and (not best or t > best) then
+          best = t
         end
+      elseif t > searchOffset and (not best or t < best) then
+        best = t
       end
-      if #candidates == 0 then
-        return false
-      end
-      return math.min(unpack(candidates))
-    else
-      local candidates = {}
-      for i in ipairs(boundaries) do
-        local t = target(i)
-        if t > searchOffset then
-          candidates[#candidates + 1] = t
-        end
-      end
-      if #candidates == 0 then
-        return false
-      end
-      return math.min(unpack(candidates))
     end
+    return best or false
   end
 end
 
----助詞・助動詞かどうかを品詞タグで判定する。
----ipadic の品詞大分類で「助詞」「助動詞」を結合対象とする。
----@param pos string 品詞大分類 (Vibrato の parse_line の pos)
 ---@return boolean
 function M.is_particle(pos)
   if not pos or pos == "" then

@@ -19,10 +19,9 @@ describe("bunsetsu.spider (nvim-spider custom pattern for bunsetsu)", function()
       assert.are.same(9, spider.pattern("これは文章です。", 1, "e"))
     end)
 
-    it("returns false when no boundary ahead at line start for b", function()
-      -- backward では line が逆順。行頭 (searchOffset 逆順で len) からは移動なし
-      local rev = ("これは文章です。"):reverse()
-      assert.are.same(false, spider.pattern(rev, 24, "b"))
+    it("returns false when no boundary is before the cursor for b", function()
+      -- 行頭 (searchOffset 1) より前には境界が無い
+      assert.are.same(false, spider.pattern("これは文章です。", 1, "b", true))
     end)
 
     it("returns false when no boundary ahead", function()
@@ -31,26 +30,22 @@ describe("bunsetsu.spider (nvim-spider custom pattern for bunsetsu)", function()
     end)
   end)
 
-  describe("pattern() backward coordinates", function()
-    it("returns reversed coordinate for b", function()
-      -- backward では line が逆順、searchOffset も逆順座標。
-      -- カーソルが「文章です。」(col10-24) の途中 col0=11 (1-based 12) のとき、
-      -- 逆順座標 = 24 - 12 + 1 = 13
-      -- `b` は「現在の文節 (文章です。) の先頭」= 元座標 10 へ移動する。
-      -- その逆順座標 = 24 - 10 + 1 = 15
+  describe("pattern() with backwards = true", function()
+    it("returns the previous bunsetsu start for b", function()
       local line = "これは文章です。"
-      local rev = line:reverse()
-      local result = spider.pattern(rev, 13, "b")
-      assert.are.same(15, result)
+      -- カーソルが「文章です。」(col10-24) の途中 byte 12 のとき、
+      -- b はその文節の先頭 (byte 10) へ戻る
+      assert.are.same(10, spider.pattern(line, 12, "b", true))
+      -- カーソルが「文章です。」の先頭 (byte 10) のとき、
+      -- b は前の文節「これは」の先頭 (byte 1) へ戻る
+      assert.are.same(1, spider.pattern(line, 10, "b", true))
     end)
 
-    it("returns reversed coordinate for ge", function()
-      -- ge: 「文章です。」の先頭 (1-based 10) ではなく、その前の文節「これは」の
-      -- 終端 (1-based 9) へ移動。逆順座標 = 24 - 9 + 1 = 16
+    it("returns the previous bunsetsu end for ge", function()
       local line = "これは文章です。"
-      local rev = line:reverse()
-      local result = spider.pattern(rev, 13, "ge")
-      assert.are.same(16, result)
+      -- カーソルが「文章です。」の途中 byte 12 のとき、
+      -- ge は前の文節「これは」の終端 (byte 9) へ戻る
+      assert.are.same(9, spider.pattern(line, 12, "ge", true))
     end)
   end)
 

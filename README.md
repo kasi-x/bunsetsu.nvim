@@ -43,8 +43,6 @@ or [Vaporetto](https://github.com/daac-tools/vaporetto) tokenizers instead.
 - Neovim 0.11+ (CI tests 0.11, 0.12, stable, nightly)
 - Optional: [nvim-spider](https://github.com/chrisgrieser/nvim-spider) and
   [flash.nvim](https://github.com/folke/flash.nvim) for the integrations
-- Optional: [lua-utf8](https://luarocks.org/modules/xiaoyaocrack/lua-utf8)
-  (`luarocks install lua-utf8`) for byte-safe operation of the CLI backends
 - Optional: Vibrato or Vaporetto CLI + dictionary for the external backends
 
 ## Installation
