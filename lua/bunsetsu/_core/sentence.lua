@@ -8,12 +8,13 @@
 -- 文末位置は、文末文字に加えて直後に続く閉じ括弧・引用符 (」』）など) の
 -- 末尾バイトを指す。
 
+local config = require("bunsetsu._core.configuration")
 local utf8 = require("bunsetsu._core.utf8")
 local lang = require("bunsetsu._core.lang")
 
 local M = {}
 
----日本語の文末文字。全角ピリオド (．) と半角ピリオド (｡) も含む。
+---既定の日本語の文末文字。全角ピリオド (．) と半角ピリオド (｡) を含む。
 M.END_CHARS = "。！？…．｡"
 
 ---文末文字の直後に続いてよい閉じ括弧・引用符。
@@ -52,7 +53,8 @@ local QUOTE_LOOKAHEAD = 5
 ---@param ch string
 ---@return boolean
 local function is_end_char(ch)
-  return M.END_CHARS:find(ch, 1, true) ~= nil
+  local extra = config.DATA.sentence and config.DATA.sentence.extra_end_chars or ""
+  return M.END_CHARS:find(ch, 1, true) ~= nil or (extra ~= "" and extra:find(ch, 1, true) ~= nil)
 end
 
 ---chars[i..] が間接引用の接続表現で始まるかどうか。

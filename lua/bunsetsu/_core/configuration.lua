@@ -31,6 +31,14 @@ local _DEFAULTS = {
     -- 品詞ごとにアンダーラインで色を付ける。
     enabled = false,
   },
+  -- 文末移動の追加設定
+  sentence = {
+    -- 既定の文末文字 (。！？…．｡) に追加する文末文字
+    extra_end_chars = "",
+  },
+  -- 日本語検出の走査行数 (バッファ先頭からこの行数を走査して
+  -- 日本語を含むかを判定する)
+  jp_scan_lines = 500,
 }
 
 --- Setup `bunsetsu` for the first time, if needed.

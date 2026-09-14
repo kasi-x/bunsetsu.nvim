@@ -72,7 +72,7 @@ function M.setup(opts)
   ---バッファが日本語を含むかを更新する (先頭 500 行のみ走査)。
   local function refresh_jp_flag(buf)
     buf_is_jp[buf] = false
-    local lines = vim.api.nvim_buf_get_lines(buf, 0, 500, false)
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, configuration.DATA.jp_scan_lines or 500, false)
     for _, line in ipairs(lines) do
       if lang.has_japanese(line) then
         buf_is_jp[buf] = true
