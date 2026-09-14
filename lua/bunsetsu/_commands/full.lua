@@ -206,21 +206,6 @@ function M.prev(model_name)
   return prev
 end
 
----指定範囲の segment を返す。
----@param model_name string
----@param start_lnum number
----@param end_lnum number
----@return FullSegment[]
-function M.range(model_name, start_lnum, end_lnum)
-  local result = {}
-  for _, fs in ipairs(M.full(model_name)) do
-    if fs.lnum >= start_lnum and fs.lnum <= end_lnum then
-      result[#result + 1] = fs
-    end
-  end
-  return result
-end
-
 ---キャッシュを破棄する。
 ---lnum を指定すると該当行のみ、省略すると全行破棄する。
 ---@param lnum? number

@@ -288,10 +288,4 @@ function M.stop()
   linecache = nil
 end
 
----同期プロセスが起動しているか。
----@return boolean
-function M.is_running()
-  return engine:is_running()
-end
-
 return M

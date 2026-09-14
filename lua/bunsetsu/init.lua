@@ -143,11 +143,6 @@ function M.prev_sentence_end(count)
   return require("bunsetsu._commands.sentence").prev_end(count or 1)
 end
 
----デバッグ用: 設定内容を表示する。
-function M.show_config()
-  print(vim.inspect(configuration.DATA))
-end
-
 ---指定語の辞書形(原形)を UniDic から引く。
 ---
 ---Vaporetto で分割した語の表層形を渡すと、原形・読み・品詞を返す。
