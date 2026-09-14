@@ -78,8 +78,34 @@ end
 ---@param ch string
 ---@param next_ch string|nil 次の文字 (行末なら nil)
 ---@return boolean
-local function is_ascii_end(ch, next_ch)
+---ch がひらがな (ぁ-んー) かどうか。
+---@param ch string
+---@return boolean
+local function is_hiragana_char(ch)
+  if #ch ~= 3 then
+    return false
+  end
+  local b1, b2, b3 = ch:byte(1, 3)
+  -- U+3041-U+3096 (ぁ-ん) = UTF-8 E3 81 81 - E3 82 96
+  if b1 ~= 0xE3 then
+    return false
+  end
+  if b2 == 0x81 then
+    return b3 >= 0x81
+  end
+  if b2 == 0x82 then
+    return b3 <= 0x96
+  end
+  return false
+end
+
+local function is_ascii_end(ch, prev_ch, next_ch)
   if ch == "." then
+    -- ひらがなの直後のピリオドは日本語文の句点として機能する
+    -- (例: 「テスト.次へ」→「テスト.」で分割)
+    if prev_ch and is_hiragana_char(prev_ch) then
+      return true
+    end
     return next_ch == nil
       or next_ch == " "
       or next_ch == "\t"
@@ -130,7 +156,7 @@ function M.ends(line)
     local end_i = nil
     if is_end_char(ch) then
       end_i = i
-    elseif is_ascii_end(ch, i < n and chars[i + 1] or nil) then
+    elseif is_ascii_end(ch, i > 1 and chars[i - 1] or nil, i < n and chars[i + 1] or nil) then
       end_i = i
     end
 
