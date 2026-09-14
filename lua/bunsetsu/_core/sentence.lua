@@ -9,6 +9,7 @@
 -- 末尾バイトを指す。
 
 local utf8 = require("bunsetsu._core.utf8")
+local lang = require("bunsetsu._core.lang")
 
 local M = {}
 
@@ -78,33 +79,14 @@ end
 ---@param ch string
 ---@param next_ch string|nil 次の文字 (行末なら nil)
 ---@return boolean
----ch がひらがな (ぁ-んー) かどうか。
----@param ch string
----@return boolean
-local function is_hiragana_char(ch)
-  if #ch ~= 3 then
-    return false
-  end
-  local b1, b2, b3 = ch:byte(1, 3)
-  -- U+3041-U+3096 (ぁ-ん) = UTF-8 E3 81 81 - E3 82 96
-  if b1 ~= 0xE3 then
-    return false
-  end
-  if b2 == 0x81 then
-    return b3 >= 0x81
-  end
-  if b2 == 0x82 then
-    return b3 <= 0x96
-  end
-  return false
-end
 
 local function is_ascii_end(ch, prev_ch, next_ch)
   if ch == "." then
-    -- ひらがなの直後のピリオドは日本語文の句点として機能する
-    -- (例: 「テスト.次へ」→「テスト.」で分割)
-    if prev_ch and is_hiragana_char(prev_ch) then
-      return true
+    -- 直前が日本語文字 (かな・漢字) の場合、ASCII ピリオドは日本語文の
+    -- 句点として機能する。ただし直後に ASCII 英数字が続く場合は
+    -- ファイル名・バージョン表記の可能性が高いので分割しない
+    if prev_ch and lang.has_japanese(prev_ch) then
+      return next_ch == nil or not next_ch:match("[%w.]")
     end
     return next_ch == nil
       or next_ch == " "
