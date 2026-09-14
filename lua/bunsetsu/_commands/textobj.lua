@@ -44,6 +44,35 @@ function M.select_range(lnum1, col1, lnum2, col2, opts)
   return op.setEndpoints({ lnum1, col1 - 1 }, { lnum2, col2 - 1 }, opts)
 end
 
+---オブジェクトの範囲 (start〜stop) を spider 経由で確定する。
+---visual mode のときは元のアンカー (getpos("v")) を固定し、カーソル側の端を
+---オブジェクトの境界まで延長する (選択の置き換えではなく延長)。
+---@param start { lnum: number, col: number } オブジェクトの始端 (1始まりバイト)
+---@param stop { lnum: number, col: number } オブジェクトの終端 (1始まりバイト)
+---@param opts? { inclusive?: boolean }
+---@return boolean
+local function apply_region(start, stop, opts)
+  local mode = vim.fn.mode()
+  if mode == "v" or mode == "V" or mode == "\22" then
+    local ok, op = pcall(require, "spider.extras.operator-pending")
+    if not ok then
+      vim.notify(
+        "bunsetsu: この機能には nvim-spider が必要です (選択範囲の確定を spider に委譲しています)",
+        vim.log.levels.WARN
+      )
+      return false
+    end
+    local v = vim.fn.getpos("v")
+    local anchor = { lnum = v[2], col = v[3] - 1 }
+    local cursor = vim.api.nvim_win_get_cursor(0)
+    local going_forward = cursor[1] > anchor.lnum
+      or (cursor[1] == anchor.lnum and cursor[2] >= anchor.col)
+    local far = going_forward and stop or start
+    return op.setEndpoints({ anchor.lnum, anchor.col }, { far.lnum, far.col - 1 }, opts)
+  end
+  return M.select_range(start.lnum, start.col, stop.lnum, stop.col, opts)
+end
+
 ---文末位置から、文末文字・閉じ括弧・空白を除いた「文の内容」の終端を返す。
 ---全文が記号のときは nil。
 ---@param lnum number
@@ -218,7 +247,11 @@ function M.sentence(outer)
   if not region then
     return false
   end
-  return M.select_range(region[1], region[2], region[3], region[4], { inclusive = true })
+  return apply_region(
+    { lnum = region[1], col = region[2] },
+    { lnum = region[3], col = region[4] },
+    { inclusive = true }
+  )
 end
 
 ---文節のテキストオブジェクト (iW / aW 相当)。
@@ -229,7 +262,11 @@ function M.phrase(outer)
   if not region then
     return false
   end
-  return M.select_range(region[1], region[2], region[3], region[4], { inclusive = true })
+  return apply_region(
+    { lnum = region[1], col = region[2] },
+    { lnum = region[3], col = region[4] },
+    { inclusive = true }
+  )
 end
 
 return M

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- テキストオブジェクトを visual mode で使ったとき、選択範囲を置き換えずに
+  元のアンカー (getpos("v")) を固定したまま延長するようになった
 - 文末移動・テキストオブジェクトが空行による段落境界を尊重するように
   なった (`)` は段落末で止まり、`is` / `as` は段落を跨がない)
 - property-based テスト (決定論的乱数による文末検出・分節分割の不変条件

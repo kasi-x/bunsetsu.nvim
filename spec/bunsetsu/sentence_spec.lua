@@ -158,6 +158,25 @@ describe("bunsetsu._commands.sentence (sentence motion)", function()
     assert.is_false(sentence_motion.prev_end(1))
   end)
 
+  it("stops at the paragraph end when the next line is blank", function()
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+      "一文目です。段落はここまで。",
+      "",
+      "次の段落の一文目です。",
+    })
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    assert.is_true(sentence_motion.next_end(2))
+    -- 段落の最終非空白文字 (1 行目の 。) で止まる (1 行目は 42 バイト)
+    assert.are.same({ 1, 41 }, vim.api.nvim_win_get_cursor(0))
+  end)
+
+  it("count larger than boundaries keeps the cursor", function()
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, { "一文目です。" })
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    assert.is_false(sentence_motion.next_end(99))
+    assert.are.same({ 1, 0 }, vim.api.nvim_win_get_cursor(0))
+  end)
+
   it("works on english text", function()
     vim.api.nvim_buf_set_lines(0, 0, -1, false, { "One. Two. Three." })
     util.set_cursor(1, 1)

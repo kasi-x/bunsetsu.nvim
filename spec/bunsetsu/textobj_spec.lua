@@ -95,4 +95,82 @@ describe("bunsetsu.textobj (sentence & phrase regions)", function()
       assert.is_nil(textobj.phrase_region(true))
     end)
   end)
+  describe("selection via spider setEndpoints (mocked)", function()
+    local captured
+    local ESC = vim.api.nvim_replace_termcodes("<Esc>", true, false, true)
+
+    before_each(function()
+      captured = {}
+      package.preload["spider.extras.operator-pending"] = function()
+        return {
+          setEndpoints = function(p1, p2, opts)
+            captured[#captured + 1] = { p1 = p1, p2 = p2, opts = opts }
+            return true
+          end,
+        }
+      end
+      vim.api.nvim_buf_set_lines(
+        0,
+        0,
+        -1,
+        false,
+        { "一文目です。二文目です。三文目です。" }
+      )
+    end)
+
+    after_each(function()
+      package.preload["spider.extras.operator-pending"] = nil
+      package.loaded["spider.extras.operator-pending"] = nil
+      if vim.fn.mode():match("^[vV\22]") then
+        vim.cmd("normal! " .. ESC)
+      end
+    end)
+
+    it("operator-pending passes the sentence range (inclusive)", function()
+      vim.api.nvim_win_set_cursor(0, { 1, 20 }) -- 「二文目です。」の中 (byte 21)
+      textobj.sentence(true)
+      assert.are.equal(1, #captured)
+      assert.are.same({ 1, 18 }, captured[1].p1) -- 文頭 (0始まり)
+      assert.are.same({ 1, 35 }, captured[1].p2) -- 。の末尾 (0始まり)
+      assert.are.same({ inclusive = true }, captured[1].opts)
+    end)
+
+    it("operator-pending passes the inner phrase range", function()
+      vim.api.nvim_win_set_cursor(0, { 1, 20 })
+      textobj.phrase(false)
+      assert.are.equal(1, #captured)
+      assert.are.same({ 1, 18 }, captured[1].p1)
+      assert.are.same({ 1, 35 }, captured[1].p2)
+    end)
+
+    it("visual mode keeps the anchor and extends forward", function()
+      vim.api.nvim_win_set_cursor(0, { 1, 9 }) -- byte 10 (二文目の先頭) で v
+      vim.cmd("normal! v")
+      vim.api.nvim_win_set_cursor(0, { 1, 20 })
+      textobj.sentence(true)
+      local call = captured[#captured]
+      assert.are.same({ 1, 9 }, call.p1) -- アンカーは固定
+      assert.are.same({ 1, 35 }, call.p2) -- 文末まで延長
+    end)
+
+    it("visual mode extends backward to the object start", function()
+      vim.api.nvim_win_set_cursor(0, { 1, 20 }) -- byte 21 で v
+      vim.cmd("normal! v")
+      vim.api.nvim_win_set_cursor(0, { 1, 10 }) -- カーソルを手前に戻す (byte 11)
+      textobj.sentence(false)
+      local call = captured[#captured]
+      assert.are.same({ 1, 20 }, call.p1) -- アンカーは固定
+      assert.are.same({ 1, 0 }, call.p2) -- 文の始端 (0始まり) まで延長
+    end)
+
+    it("visual mode phrase keeps the anchor", function()
+      vim.api.nvim_win_set_cursor(0, { 1, 12 })
+      vim.cmd("normal! v")
+      vim.api.nvim_win_set_cursor(0, { 1, 25 })
+      textobj.phrase(true)
+      local call = captured[#captured]
+      assert.are.same({ 1, 12 }, call.p1)
+      assert.are.same({ 1, 35 }, call.p2)
+    end)
+  end)
 end)
