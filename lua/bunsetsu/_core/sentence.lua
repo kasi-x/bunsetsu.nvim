@@ -12,8 +12,8 @@ local utf8 = require("bunsetsu._core.utf8")
 
 local M = {}
 
----日本語の文末文字。
-M.END_CHARS = "。！？…"
+---日本語の文末文字。全角ピリオド (．) と半角ピリオド (｡) も含む。
+M.END_CHARS = "。！？…．｡"
 
 ---文末文字の直後に続いてよい閉じ括弧・引用符。
 M.CLOSERS = "」』）〕〉》\"'"
@@ -79,7 +79,7 @@ end
 ---@param next_ch string|nil 次の文字 (行末なら nil)
 ---@return boolean
 local function is_ascii_end(ch, next_ch)
-  if ch == "." or ch == "．" then
+  if ch == "." then
     return next_ch == nil
       or next_ch == " "
       or next_ch == "\t"

@@ -39,6 +39,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 全角ピリオド (．) が文末として認識されない問題を修正
+  (END_CHARS に追加し、常に文末として扱う)
+- 日英混在テキストの境界ケースを網羅したテストを追加
+  (URL・省略形・小数点・全角/半角ピリオド・複合終端符)
+
+### Fixed
+
 - `setup()` 内で debounce 用タイマーをイベントのたびに生成しており、
   デバウンスが機能していなかった問題。タイマーを setup 時に 1 回だけ
   生成してイベント間で共有するようにした
