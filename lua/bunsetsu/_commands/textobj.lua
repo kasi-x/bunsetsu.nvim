@@ -44,54 +44,6 @@ function M.select_range(lnum1, col1, lnum2, col2, opts)
   return op.setEndpoints({ lnum1, col1 - 1 }, { lnum2, col2 - 1 }, opts)
 end
 
----(lnum, col) 以降で最初の非空白文字の位置を返す。空行は読み飛ばす。
----@param lnum number
----@param col number
----@return { lnum: number, col: number }|nil
-local function first_non_blank(lnum, col)
-  local last = vim.api.nvim_buf_line_count(0)
-  for l = lnum, last do
-    local line = util.line(l)
-    local pos = util.next_non_space(line, l == lnum and col or 1)
-    if pos then
-      return { lnum = l, col = pos }
-    end
-  end
-  return nil
-end
-
----cursor 位置以降の最初の文末 (cursor が文末の上ならその文末) を返す。
----@param lnum number
----@param col number
----@return { lnum: number, col: number }|nil
-local function next_end_from(lnum, col)
-  local last = vim.api.nvim_buf_line_count(0)
-  for l = lnum, last do
-    for _, pos in ipairs(sentence.ends(util.line(l))) do
-      if l > lnum or pos >= col then
-        return { lnum = l, col = pos }
-      end
-    end
-  end
-  return nil
-end
-
----cursor 位置より前の最後の文末を返す。
----@param lnum number
----@param col number
----@return { lnum: number, col: number }|nil
-local function prev_end_before(lnum, col)
-  for l = lnum, 1, -1 do
-    local ends = sentence.ends(util.line(l))
-    for i = #ends, 1, -1 do
-      if l < lnum or ends[i] < col then
-        return { lnum = l, col = ends[i] }
-      end
-    end
-  end
-  return nil
-end
-
 ---文末位置から、文末文字・閉じ括弧・空白を除いた「文の内容」の終端を返す。
 ---全文が記号のときは nil。
 ---@param lnum number
@@ -137,19 +89,41 @@ end
 ---@return { [1]: number, [2]: number, [3]: number, [4]: number }|nil
 function M.sentence_region(outer)
   local cur = util.get_cursor()
-  local cur_lnum, cur_col = cur[1], cur[2] + 1
-
-  local e = next_end_from(cur_lnum, cur_col)
-  if not e then
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  -- 段落を跨がない (空行で止まる)。start は前の文末の直後の非空白文字
+  local range = sentence.paragraph_sentence_range(lines, cur[1], cur[2] + 1)
+  if not range then
     return nil
   end
 
-  local p = prev_end_before(cur_lnum, cur_col)
-  local s = p and first_non_blank(p.lnum, p.col + 1) or first_non_blank(1, 1)
-  if not s then
-    return nil
+  local s, e = range.start, range.stop
+
+  -- 先頭の空白を読み飛ばす (outer / inner 共通)
+  local il, ic = s.lnum, s.col
+  while il <= e.lnum do
+    local line = lines[il] or ""
+    while ic <= #line do
+      local b = line:byte(ic)
+      if
+        b == 0x20
+        or b == 0x09
+        or (b == 0xE3 and line:byte(ic + 1) == 0x80 and line:byte(ic + 2) == 0x80)
+      then
+        ic = ic + (b == 0xE3 and 3 or 1)
+      else
+        break
+      end
+    end
+    if ic <= #line then
+      break
+    end
+    il, ic = il + 1, 1
+  end
+  if il < e.lnum or (il == e.lnum and ic <= e.col) then
+    s = { lnum = il, col = ic }
   end
 
+  -- outer: 文末文字を含む。inner: 文末文字を除く
   if outer then
     return { s.lnum, s.col, e.lnum, e.col }
   end

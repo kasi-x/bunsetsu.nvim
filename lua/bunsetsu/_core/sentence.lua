@@ -95,6 +95,10 @@ local function is_closer(ch)
   return M.CLOSERS:find(ch, 1, true) ~= nil
 end
 
+---行ごとの ends() 結果キャッシュ (移動のたびに同じ行を再解析しない)。
+---@type table<string, number[]>
+local ends_cache = {}
+
 ---行内の文末のバイト位置 (1始まり) を昇順で返す。
 ---位置は文末文字 (とそれに続く閉じ括弧・引用符の並び) の最終バイト。
 ---@param line string
@@ -102,6 +106,10 @@ end
 function M.ends(line)
   if line == "" then
     return {}
+  end
+  local cached = ends_cache[line]
+  if cached then
+    return cached
   end
 
   -- 文字ごとに分解してバイトオフセットを記録する
@@ -144,7 +152,180 @@ function M.ends(line)
       i = i + 1
     end
   end
+  ends_cache[line] = ends
   return ends
+end
+
+--------------------------------------------------------------------------------
+-- 段落 (空行で区切られた塊) を考慮した境界
+--------------------------------------------------------------------------------
+
+---空行 (空白のみの行) かどうか。
+---@param line string
+---@return boolean
+local function is_blank_line(line)
+  return line:match("^%s*$") ~= nil
+end
+
+---行の最初の非空白バイト位置を返す (全て空白なら nil)。全角空白も含む。
+---@param line string
+---@return number|nil
+local function first_non_blank(line)
+  local i = 1
+  while i <= #line do
+    local b = line:byte(i)
+    if b == 0x20 or b == 0x09 then
+      i = i + 1
+    elseif b == 0xE3 and line:byte(i + 1) == 0x80 and line:byte(i + 2) == 0x80 then
+      i = i + 3
+    else
+      return i
+    end
+  end
+  return nil
+end
+
+---行の最終非空白バイト位置を返す (全て空白なら nil)。
+---@param line string
+---@return number|nil
+local function last_non_blank(line)
+  local trimmed = line:gsub("%s+$", "")
+  if trimmed == "" then
+    return nil
+  end
+  return #trimmed
+end
+
+---(lnum, col) が (target_lnum, target_col) より後か。
+---@param lnum number
+---@param col number
+---@param target_lnum number
+---@param target_col number
+---@return boolean
+local function is_after(lnum, col, target_lnum, target_col)
+  return lnum > target_lnum or (lnum == target_lnum and col > target_col)
+end
+
+---(lnum, col) 以降の最初の境界 (文末または段落末) を行配列から探す。
+---段落末とは、段落の最終行の最終非空白文字。空行で段落が区切られる。
+---@param lines string[] バッファの行配列
+---@param lnum number 開始行 (1始まり)
+---@param col number 開始位置 (1始まりバイト)
+---@return { lnum: number, col: number }|nil
+function M.next_boundary(lines, lnum, col)
+  local paragraph_end = nil
+  for l = lnum, #lines do
+    local line = lines[l] or ""
+    if is_blank_line(line) then
+      if paragraph_end and is_after(paragraph_end.lnum, paragraph_end.col, lnum, col) then
+        return paragraph_end
+      end
+      paragraph_end = nil
+    else
+      for _, pos in ipairs(M.ends(line)) do
+        if is_after(l, pos, lnum, col) then
+          return { lnum = l, col = pos }
+        end
+      end
+      local last = last_non_blank(line)
+      if last then
+        paragraph_end = { lnum = l, col = last }
+      end
+    end
+  end
+  return nil
+end
+
+---(lnum, col) 以前の最後の境界 (文末または段落先頭) を行配列から探す。
+---段落先頭とは、段落の最初の行の最初の非空白文字。
+---@param lines string[] バッファの行配列
+---@param lnum number 開始行 (1始まり)
+---@param col number 開始位置 (1始まりバイト)
+---@return { lnum: number, col: number }|nil
+function M.prev_boundary(lines, lnum, col)
+  local paragraph_start = nil
+  local in_paragraph = false
+  for l = lnum, 1, -1 do
+    local line = lines[l] or ""
+    if is_blank_line(line) then
+      if in_paragraph and paragraph_start then
+        if
+          paragraph_start.lnum < lnum
+          or (paragraph_start.lnum == lnum and paragraph_start.col < col)
+        then
+          return paragraph_start
+        end
+      end
+      in_paragraph = false
+      paragraph_start = nil
+    else
+      local ends = M.ends(line)
+      for i = #ends, 1, -1 do
+        local pos = ends[i]
+        if l < lnum or (l == lnum and pos < col) then
+          return { lnum = l, col = pos }
+        end
+      end
+      local first = first_non_blank(line)
+      if first then
+        paragraph_start = { lnum = l, col = first }
+        in_paragraph = true
+      end
+    end
+  end
+  return nil
+end
+
+---(lnum, col) を含む段落の中の、カーソルを含む文の範囲を返す。
+---start は文の最初の非空白文字、stop は文末文字 (または段落末)。
+---空白行を跨がない。
+---@param lines string[] バッファの行配列
+---@param lnum number
+---@param col number
+---@return nil|{ start: { lnum: number, col: number }, stop: { lnum: number, col: number } }
+function M.paragraph_sentence_range(lines, lnum, col)
+  -- カーソル行が空行なら、次の段落へ読み替える
+  if lines[lnum] and is_blank_line(lines[lnum]) then
+    local l = lnum
+    while l <= #lines and (not lines[l] or is_blank_line(lines[l])) do
+      l = l + 1
+    end
+    lnum, col = l, 1
+  end
+
+  -- 段落の上端
+  local start = nil
+  local l = lnum
+  while l >= 1 and lines[l] and not is_blank_line(lines[l]) do
+    local f = first_non_blank(lines[l])
+    if f then
+      start = { lnum = l, col = f }
+    end
+    l = l - 1
+  end
+  if not start then
+    return nil
+  end
+
+  -- 段落内を前方向に走査し、カーソル以降の最初の文末で止める。
+  -- カーソルより前の文末が出るたびに、その直後を次の文の始点として更新する
+  local stop = nil
+  l = start.lnum
+  while l <= #lines and lines[l] and not is_blank_line(lines[l]) do
+    local line = lines[l]
+    local last = last_non_blank(line)
+    if last then
+      stop = { lnum = l, col = last }
+    end
+    for _, pos in ipairs(M.ends(line)) do
+      if l > lnum or (l == lnum and pos >= col) then
+        return { start = start, stop = { lnum = l, col = pos } }
+      end
+      start = { lnum = l, col = pos + 1 }
+    end
+    l = l + 1
+  end
+  return { start = start, stop = stop }
 end
 
 return M

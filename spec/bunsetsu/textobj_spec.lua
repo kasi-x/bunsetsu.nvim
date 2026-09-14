@@ -46,10 +46,22 @@ describe("bunsetsu.textobj (sentence & phrase regions)", function()
       assert.are.same({ 1, 14, 1, 24 }, textobj.sentence_region(false))
     end)
 
-    it("returns nil when no sentence end remains", function()
+    it("caps at the paragraph end when no terminator exists", function()
       vim.api.nvim_buf_set_lines(0, 0, -1, false, { "文末のない行" })
       vim.api.nvim_win_set_cursor(0, { 1, 0 })
-      assert.is_nil(textobj.sentence_region(true))
+      assert.are.same({ 1, 1, 1, 18 }, textobj.sentence_region(true))
+    end)
+
+    it("does not cross blank lines (paragraph boundary)", function()
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+        "一つ目の段落の文。",
+        "",
+        "次の段落の文です。",
+      })
+      vim.api.nvim_win_set_cursor(0, { 1, 3 })
+      assert.are.same({ 1, 1, 1, 27 }, textobj.sentence_region(true))
+      vim.api.nvim_win_set_cursor(0, { 3, 1 })
+      assert.are.same({ 3, 1, 3, 27 }, textobj.sentence_region(true))
     end)
   end)
 

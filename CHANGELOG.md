@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- 文末移動・テキストオブジェクトが空行による段落境界を尊重するように
+  なった (`)` は段落末で止まり、`is` / `as` は段落を跨がない)
+- property-based テスト (決定論的乱数による文末検出・分節分割の不変条件
+  検証 100 ケースを CI で実行)
+
 ### Changed
 
 - spider の function patterns 契約に準拠: 境界関数は常に**元の行がバイト
