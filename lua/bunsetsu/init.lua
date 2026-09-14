@@ -25,7 +25,7 @@ end
 ---全文モードの segment 一覧を返す (flash matcher の基盤)。
 ---@return FullSegment[]
 function M.full_segments()
-  return full.full(full.current_model())
+  return full.full(configuration.current_model())
 end
 
 ---現在バッファの形態素を品詞ごとにアンダーラインで色付けする。
@@ -50,7 +50,7 @@ function M.split_lines(line1, line2)
   for lnum = line1, line2 do
     local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, false)[1] or ""
     local segcols
-    if full.use_vibrato() then
+    if configuration.use_vibrato() then
       local vibrato = require("bunsetsu._commands.vibrato")
       local words, infos = vibrato.tokenize_detailed(line)
       local positions = segment.word_positions(line, words)
@@ -188,7 +188,7 @@ function M.lemma_under_cursor()
   local segment = require("bunsetsu._core.segment")
   local tokens = {} ---@type { surface: string, start: number, pos: string, lemma: string, reading: string }[]
 
-  if full.use_vibrato() then
+  if configuration.use_vibrato() then
     local vibrato = require("bunsetsu._commands.vibrato")
     local words, infos = vibrato.tokenize_detailed(line)
     local positions = segment.word_positions(line, words)

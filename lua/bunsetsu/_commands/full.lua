@@ -8,6 +8,7 @@
 --   * 編集時は `invalidate(lnum)` で該当行のキャッシュだけを破棄する。
 
 local lang = require("bunsetsu._core.lang")
+local config = require("bunsetsu._core.configuration")
 
 local M = {}
 
@@ -42,35 +43,12 @@ local function vibrato_segments(line)
   return segment.words_to_segments(words, positions, infos)
 end
 
----外部トークナイザ (Vibrato) を使うかどうか。辞書未設定なら TinySegmenter。
----@return boolean
-function M.use_vibrato()
-  local config = require("bunsetsu._core.configuration")
-  local dict = config.DATA.vibrato and config.DATA.vibrato.dict or ""
-  return dict ~= ""
-end
-
----現在有効なバックエンドを表すキャッシュキーを返す。
----(use_vibrato / vaporetto.model / 同梱モデル名の順で判定)
----@return string
-function M.current_model()
-  local config = require("bunsetsu._core.configuration")
-  if M.use_vibrato() then
-    return config.DATA.vibrato.dict
-  end
-  local vm = config.DATA.vaporetto and config.DATA.vaporetto.model or ""
-  if vm ~= "" then
-    return vm
-  end
-  return config.DATA.model
-end
-
 ---行を文節分割して SegmentCol[] を返す (バックエンドは設定に従う)。
 ---@param model_name string
 ---@param line string
 ---@return SegmentCol[]
 local function line_segments(model_name, line)
-  if M.use_vibrato() then
+  if config.use_vibrato() then
     return vibrato_segments(line)
   end
   local seg = require("bunsetsu._core.segment")
@@ -143,7 +121,7 @@ function M.preload(model_name)
 
   -- TinySegmenter バックエンドは常駐プロセスが不要なため、
   -- 初回 full() 呼び出し時の分割で足りる (プリロード不要)。
-  if not M.use_vibrato() then
+  if not config.use_vibrato() then
     return
   end
 
@@ -241,7 +219,7 @@ function M.refresh_line(model_name, lnum)
   end
 
   -- TinySegmenter バックエンド: 純 Lua の分割なので同期で処理する
-  if not M.use_vibrato() then
+  if not config.use_vibrato() then
     local seg = require("bunsetsu._core.segment")
     local segcols = seg.split_line(model_name, line)
     linecache[model_name] = linecache[model_name] or {}

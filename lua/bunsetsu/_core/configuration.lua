@@ -62,4 +62,25 @@ function M.resolve_data(data)
   return M.DATA
 end
 
+---外部トークナイザ (Vibrato) を使うかどうか。辞書未設定なら TinySegmenter。
+---@return boolean
+function M.use_vibrato()
+  local dict = M.DATA.vibrato and M.DATA.vibrato.dict or ""
+  return dict ~= ""
+end
+
+---現在有効なバックエンドのキャッシュキーを返す。
+---(use_vibrato / vaporetto.model / 同梱モデル名の順で判定)
+---@return string
+function M.current_model()
+  if M.use_vibrato() then
+    return M.DATA.vibrato.dict
+  end
+  local vm = M.DATA.vaporetto and M.DATA.vaporetto.model or ""
+  if vm ~= "" then
+    return vm
+  end
+  return M.DATA.model
+end
+
 return M
