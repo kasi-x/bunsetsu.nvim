@@ -67,6 +67,16 @@ describe("bunsetsu mixed Japanese/English boundaries", function()
       assert.are.equal(2, #ends)
     end)
 
+    it("merges consecutive mixed terminators (。!) into one boundary", function()
+      local ends = sentence.ends("説明です。!確認します。")
+      assert.are.equal(2, #ends)
+    end)
+
+    it("merges multiple terminators (？！) into one boundary", function()
+      local ends = sentence.ends("本当？！そうだ！")
+      assert.are.equal(2, #ends)
+    end)
+
     it("does not split abbreviation followed by non-space", function()
       -- "Done.Next" はピリオドの直後に非空白文字 → 分割しない
       local ends = sentence.ends("Done.Next is Japanese.")
