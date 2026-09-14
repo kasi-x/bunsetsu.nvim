@@ -36,6 +36,9 @@ local _DEFAULTS = {
     -- 既定の文末文字 (。！？…．｡) に追加する文末文字
     extra_end_chars = "",
   },
+  -- 連続する名詞を一つの文節にまとめる (Vibrato/Vaporetto のみ)
+  -- 例: 形態素(名詞)+解析(名詞) → 形態素解析
+  merge_nouns = false,
   -- 日本語検出の走査行数 (バッファ先頭からこの行数を走査して
   -- 日本語を含むかを判定する)
   jp_scan_lines = 500,

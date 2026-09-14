@@ -1,7 +1,6 @@
 describe("bunsetsu configurable options", function()
   local sentence = require("bunsetsu._core.sentence")
   local config = require("bunsetsu._core.configuration")
-  local lifecycle = require("bunsetsu._core.lifecycle")
 
   before_each(function()
     config.initialize_data_if_needed()

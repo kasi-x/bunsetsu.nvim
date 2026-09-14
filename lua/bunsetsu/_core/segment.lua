@@ -313,6 +313,7 @@ end
 ---トークナイザの語列を文節 SegmentCol[] に組み立てる。
 ---助詞・助動詞は前の語に結合し、splitpat の強制区切り文字は前の segment に
 ---残した上で直後を強制境界にする (split_line と同じ規則)。
+---merge_nouns が有効な場合、連続する名詞も一つの segment にまとめる。
 ---@param words string[] 表層形
 ---@param positions number[] 各語の開始位置 (1始まりバイト、M.word_positions)
 ---@param infos table[]|nil 各語の詳細 { pos, ... }
@@ -322,9 +323,11 @@ function M.words_to_segments(words, positions, infos)
     return {}
   end
   local vibrato = require("bunsetsu._commands.vibrato")
-  local punct_set = get_punct_set(config.DATA.splitpat)
+  local splitpat = config.DATA.splitpat or ""
+  local merge_nouns = config.DATA.merge_nouns
   local segcols = {}
   local start_col, end_col, seg_text
+  local last_pos_big = nil
 
   local function flush()
     if seg_text then
@@ -336,13 +339,17 @@ function M.words_to_segments(words, positions, infos)
   for i = 1, #words do
     local word = words[i]
     local pos = infos and infos[i] and infos[i].pos or ""
-    if punct_set[word] and seg_text then
-      -- 強制区切り文字は前の segment に残し、直後を強制境界にする
+    local is_punct = splitpat ~= "" and vim.fn.match(word, splitpat) >= 0
+    local pos_big = pos ~= "" and vim.split(pos, ",", { plain = true })[1] or pos
+
+    if is_punct and seg_text then
       end_col = positions[i] + #word - 1
       seg_text = seg_text .. word
       flush()
     elseif seg_text and vibrato.is_particle(pos) then
-      -- 助詞・助動詞は前の語に結合
+      end_col = positions[i] + #word - 1
+      seg_text = seg_text .. word
+    elseif merge_nouns and seg_text and pos_big == "名詞" and last_pos_big == "名詞" then
       end_col = positions[i] + #word - 1
       seg_text = seg_text .. word
     else
@@ -351,6 +358,7 @@ function M.words_to_segments(words, positions, infos)
       end_col = positions[i] + #word - 1
       seg_text = word
     end
+    last_pos_big = pos_big
   end
   flush()
   return segcols
