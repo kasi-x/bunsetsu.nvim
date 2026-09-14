@@ -4,6 +4,7 @@
 ---nvim_buf_set_extmark を使い、バッファの日本語部分だけを対象にする。
 
 local lang = require("bunsetsu._core.lang")
+local segment = require("bunsetsu._core.segment")
 
 local M = {}
 
@@ -84,24 +85,16 @@ function M.apply(buf, namespace)
   -- 非同期で分割し、結果を extmark に反映する
   vibrato.tokenize_async(tasks, function(results)
     for _, r in ipairs(results) do
-      local lnum = r.lnum
-      local search_from = 1
+      local positions = segment.word_positions(r.line, r.words)
       for i, word in ipairs(r.words) do
-        local pos = r.infos[i] and r.infos[i].pos or ""
-        local hl = POS_HL[pos_big(pos)]
+        local hl = POS_HL[pos_big(r.infos[i] and r.infos[i].pos or "")]
         if hl then
-          local found = vim.fn.stridx(r.line, word, search_from - 1) + 1
-          if found <= 0 then
-            found = search_from
-          end
-          local col_start = found - 1 -- extmark は 0-based byte
-          local col_end = col_start + #word
-          pcall(vim.api.nvim_buf_set_extmark, buf, namespace, lnum - 1, col_start, {
-            end_col = col_end,
+          local col_start = positions[i] - 1 -- extmark は 0-based byte
+          pcall(vim.api.nvim_buf_set_extmark, buf, namespace, r.lnum - 1, col_start, {
+            end_col = col_start + #word,
             hl_group = hl,
             hl_mode = "combine",
           })
-          search_from = found + #word
         end
       end
     end

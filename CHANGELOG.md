@@ -92,6 +92,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- setup() の autocmd 登録とバッファ状態管理を `_core.lifecycle` に分離
+  (init.lua は公開 API の facade に)
+- highlight.lua の位置走査を `segment.word_positions` に統一
+  (ハイライト対象外の語で検索位置が進まない潜在バグの修正を含む)
+
+### Changed
+
 - 未使用の util ヘルパ (line_len / at_line_end / set_cursor0) と
   Makefile の未使用変数を削除
 - 文節組み立てロジック (助詞結合・splitpat 強制区切り) を
