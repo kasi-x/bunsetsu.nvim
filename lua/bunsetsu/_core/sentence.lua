@@ -145,7 +145,10 @@ function M.ends(line)
     if end_i then
       -- 直後に続く文末文字 (…… / !! など) と閉じ括弧・引用符も文末に含める
       local j = end_i + 1
-      while j <= n and (is_end_char(chars[j]) or is_closer(chars[j])) do
+      while
+        j <= n
+        and (is_end_char(chars[j]) or is_closer(chars[j]) or chars[j] == "!" or chars[j] == "?")
+      do
         end_i = j
         j = j + 1
       end
