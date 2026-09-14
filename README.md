@@ -192,6 +192,8 @@ vim.g.bunsetsu_configuration = {
         dict = "",       -- MeCab-format dictionary path
         pos = true,      -- extract POS/lemma/reading (needed for highlight & lemma)
     },
+    -- Merge consecutive nouns into one segment (Vibrato/Vaporetto only)
+    merge_nouns = false,
     -- Vaporetto backend (optional)
     vaporetto = {
         cmd = "predict", -- predict CLI
