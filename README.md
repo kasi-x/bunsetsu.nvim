@@ -190,6 +190,7 @@ vim.g.bunsetsu_configuration = {
     vibrato = {
         cmd = "vibrato", -- tokenize CLI
         dict = "",       -- MeCab-format dictionary path
+        pos = true,      -- extract POS/lemma/reading (needed for highlight & lemma)
     },
     -- Vaporetto backend (optional)
     vaporetto = {

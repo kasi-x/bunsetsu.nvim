@@ -46,18 +46,9 @@ end
 ---@param line2 number
 function M.split_lines(line1, line2)
   local sep = configuration.DATA.splitsep
-  local segment = require("bunsetsu._core.segment")
   for lnum = line1, line2 do
     local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, false)[1] or ""
-    local segcols
-    if configuration.use_vibrato() then
-      local vibrato = require("bunsetsu._commands.vibrato")
-      local words, infos = vibrato.tokenize_detailed(line)
-      local positions = segment.word_positions(line, words)
-      segcols = segment.words_to_segments(words, positions, infos)
-    else
-      segcols = segment.split_line(configuration.DATA.model, line)
-    end
+    local segcols = full.line_segment_cols(line)
     if #segcols > 0 then
       local segs = {}
       for i, sc in ipairs(segcols) do

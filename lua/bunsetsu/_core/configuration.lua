@@ -17,6 +17,9 @@ local _DEFAULTS = {
   vibrato = {
     cmd = "vibrato",
     dict = "",
+    -- 品詞・原形・読みの抽出を有効化 (highlight / lemma に必要)。
+    -- false で高速化 (文節移動には影響しない)
+    pos = true,
   },
   vaporetto = {
     cmd = "predict",

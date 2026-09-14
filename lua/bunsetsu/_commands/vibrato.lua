@@ -94,10 +94,13 @@ end
 ---@return number[] positions
 ---@return table[] infos
 local function to_words_positions_infos(line, tokens)
+  local want_pos = config.DATA.vibrato and config.DATA.vibrato.pos ~= false
   local words, infos = {}, {}
   for _, t in ipairs(tokens) do
     words[#words + 1] = t.surface
-    infos[#infos + 1] = { pos = t.pos, lemma = t.lemma, reading = t.reading }
+    if want_pos then
+      infos[#infos + 1] = { pos = t.pos, lemma = t.lemma, reading = t.reading }
+    end
   end
   local positions = segment.word_positions(line, words)
   return words, positions, infos

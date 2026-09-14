@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `vibrato.pos` オプションを追加 (既定 true)。false で品詞抽出をスキップし
+  文節移動を高速化 (highlight / lemma は使えなくなる)
+- バックエンド選択ロジックを `_core.configuration` に統一
+  (`configuration.use_vibrato()` / `configuration.current_model()`)
+- `full.lua` の重複したバックエンド分岐を `full.line_segment_cols()` に統一
+
 ### Added
 
 - `_core.tokenizer_engine`: Vibrato / Vaporetto 両バックエンドの常駐プロセス

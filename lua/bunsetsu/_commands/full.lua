@@ -43,6 +43,54 @@ local function vibrato_segments(line)
   return segment.words_to_segments(words, positions, infos)
 end
 
+---行をトークナイザで分割して tokens (surface/start/pos/lemma/reading) を返す。
+---@param line string
+---@return { surface: string, start: number, pos: string, lemma: string, reading: string }[]
+function M.tokenize_line(line)
+  local segment = require("bunsetsu._core.segment")
+  local tokens = {}
+  if config.use_vibrato() then
+    local vibrato = require("bunsetsu._commands.vibrato")
+    local words, infos = vibrato.tokenize_detailed(line)
+    local positions = segment.word_positions(line, words)
+    for i, w in ipairs(words) do
+      local info = infos[i] or {}
+      tokens[#tokens + 1] = {
+        surface = w,
+        start = positions[i],
+        pos = info.pos or "",
+        lemma = (info.lemma and info.lemma ~= "" and info.lemma) or w,
+        reading = info.reading or "",
+      }
+    end
+  else
+    for _, sc in ipairs(segment.segment_col_line(config.DATA.model, line)) do
+      tokens[#tokens + 1] = {
+        surface = sc.segment,
+        start = sc.col,
+        pos = "",
+        lemma = sc.segment,
+        reading = "",
+      }
+    end
+  end
+  return tokens
+end
+
+---現在行 (指定行) の segcols を返す (キャッシュ使用)。
+---@param line string
+---@return SegmentCol[]
+function M.line_segment_cols(line)
+  local segment = require("bunsetsu._core.segment")
+  if config.use_vibrato() then
+    local vibrato = require("bunsetsu._commands.vibrato")
+    local words, infos = vibrato.tokenize_detailed(line)
+    local positions = segment.word_positions(line, words)
+    return segment.words_to_segments(words, positions, infos)
+  end
+  return segment.split_line(config.DATA.model, line)
+end
+
 ---行を文節分割して SegmentCol[] を返す (バックエンドは設定に従う)。
 ---@param model_name string
 ---@param line string
