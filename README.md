@@ -194,6 +194,10 @@ vim.g.bunsetsu_configuration = {
     },
     -- Merge consecutive nouns into one segment (Vibrato/Vaporetto only)
     merge_nouns = false,
+    -- Custom sentence-ending characters (added to 。！？…．｡)
+    sentence = { extra_end_chars = "" },
+    -- Number of lines to scan for Japanese detection
+    jp_scan_lines = 500,
     -- Vaporetto backend (optional)
     vaporetto = {
         cmd = "predict", -- predict CLI

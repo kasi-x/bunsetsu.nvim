@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `merge_nouns` オプション: 連続する名詞を一つの segment にまとめる
+  (Vibrato / Vaporetto 使用時。例: 形態素+解析 → 形態素解析)
+- `sentence.extra_end_chars`: カスタム文末文字の追加
+- `jp_scan_lines`: 日本語検出の走査行数設定
+- `vibrato.pos`: 品詞抽出の有効/無効切り替え (既定 true)
+
 ### Changed
 
 - `vibrato.pos` オプションを追加 (既定 true)。false で品詞抽出をスキップし
