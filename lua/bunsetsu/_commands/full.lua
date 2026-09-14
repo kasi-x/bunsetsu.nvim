@@ -50,6 +50,21 @@ function M.use_vibrato()
   return dict ~= ""
 end
 
+---現在有効なバックエンドを表すキャッシュキーを返す。
+---(use_vibrato / vaporetto.model / 同梱モデル名の順で判定)
+---@return string
+function M.current_model()
+  local config = require("bunsetsu._core.configuration")
+  if M.use_vibrato() then
+    return config.DATA.vibrato.dict
+  end
+  local vm = config.DATA.vaporetto and config.DATA.vaporetto.model or ""
+  if vm ~= "" then
+    return vm
+  end
+  return config.DATA.model
+end
+
 ---行を文節分割して SegmentCol[] を返す (バックエンドは設定に従う)。
 ---@param model_name string
 ---@param line string

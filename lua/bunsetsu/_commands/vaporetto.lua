@@ -3,19 +3,14 @@
 -- Vaporetto (https://github.com/daac-tools/vaporetto) の predict CLI を使い、
 -- 日本語を単語分割する。
 --
--- 2種類のプロセスを使う:
---   * sync_job  : 同期プロセス。spider の pattern や lemma 取得などの
---                1リクエスト1レスポンスに使う (vim.wait でブロック)。
---   * async_job : 非同期プロセス。全文プリロード・行の再分割に使う。
---                vim.wait を使わないため、タイマーや編集処理と競合しない。
---
--- プロセスを分離することで、同期・非同期の競合を根本的に排除する。
+-- プロセス管理 (sync / async の 2 接続) は共通エンジン
+-- (_core.tokenizer_engine) に一任する。
 
 local config = require("bunsetsu._core.configuration")
+local engine_mod = require("bunsetsu._core.tokenizer_engine")
+local lang = require("bunsetsu._core.lang")
 
 local M = {}
-
-local lang = require("bunsetsu._core.lang")
 
 -- M.is_particle への前方参照 (pattern 内で使用)
 local is_particle
@@ -27,153 +22,36 @@ local function has_japanese(line)
   return lang.has_japanese(line)
 end
 
--- ---------------------------------------------------------------------------
--- チャンネル管理
--- ---------------------------------------------------------------------------
-
----チャンネルが開いているか。
----@param chan number|nil
----@return boolean
-local function chan_is_open(chan)
-  if not chan or chan <= 0 then
-    return false
-  end
-  local info = vim.api.nvim_get_chan_info(chan)
-  -- pty の jobstart は stream が "job"、mode は "bytes" になる
-  return info and info.stream == "job"
-end
-
----@class ProcState
----@field job number|nil
----@field ready boolean
----@field in_buffer string
----@field out_queue string[]
----@field sent number
----@field recv number
-
----同期プロセス (spider pattern / lemma 用)
-local sync_state = {
-  job = nil,
-  ready = false,
-  in_buffer = "",
-  out_queue = {},
-  sent = 0,
-  recv = 0,
-}
-
----非同期プロセス (全文プリロード / 行再分割用)
-local async_state = {
-  job = nil,
-  ready = false,
-  in_buffer = "",
-  out_queue = {},
-  sent = 0,
-  recv = 0,
-}
-
----予測プロセスを起動する。既に起動済みなら何もしない。
----@param kind "sync"|"async"
----@return number|false チャンネルID、失敗時 false
-local function ensure_job(kind)
-  local state = kind == "sync" and sync_state or async_state
-  if chan_is_open(state.job) then
-    return state.job
-  end
-
-  local vaporetto = config.DATA.vaporetto
-  local cmd = vaporetto.cmd or "predict"
-  local model = vaporetto.model
-  if not model or model == "" then
-    return false
-  end
-
-  state.in_buffer = ""
-  state.out_queue = {}
-  state.sent = 0
-  state.recv = 0
-
-  state.job = vim.fn.jobstart({ cmd, "--model", model, "--predict-tags" }, {
-    pty = true, -- predict は stdout が tty のときだけ flush するため必要
-    on_stdout = function(_, data)
-      for _, chunk in ipairs(data) do
-        if chunk ~= "" then
-          state.in_buffer = state.in_buffer .. chunk
-          local lines = vim.split(state.in_buffer, "[\r\n]+", { plain = false })
-          state.in_buffer = table.remove(lines)
-          for _, line in ipairs(lines) do
-            if line:find("Start tokenization") then
-              state.ready = true
-            elseif line:find("Loading model file") or line:find("^Elapsed:") then
-              -- スキップ
-            elseif line ~= "" and line:find("/") then
-              -- pty のエコーバック (分割結果以外) は / を含まないので除外
-              state.out_queue[#state.out_queue + 1] = line
-              state.recv = state.recv + 1
-            end
-          end
-        end
-      end
-    end,
-    on_exit = function()
-      state.job = nil
-      state.ready = false
-    end,
-  })
-
-  if not state.job or state.job <= 0 then
-    state.job = nil
-    return false
-  end
-
-  -- モデルロード完了まで待つ (sync のみ。async は待たず、ready フラグで判定)
-  if kind == "sync" then
-    state.ready = false
-    vim.wait(10000, function()
-      return state.ready
-    end, 10)
-    if not state.ready then
-      vim.fn.jobstop(state.job)
-      state.job = nil
-      return false
+---常駐プロセスの共通エンジン (sync + async)。
+local engine = engine_mod.new({
+  build_cmd = function()
+    local vaporetto = config.DATA.vaporetto
+    local model = vaporetto.model
+    if not model or model == "" then
+      return nil
     end
-  end
-
-  return state.job
-end
+    return { vaporetto.cmd or "predict", "--model", model, "--predict-tags" }
+  end,
+  classify = function(line)
+    if line:find("Start tokenization") then
+      return "ready"
+    elseif line:find("Loading model file") or line:find("^Elapsed:") then
+      return "skip"
+    elseif line ~= "" and line:find("/") then
+      -- pty のエコーバック (分割結果以外) は / を含まないので除外
+      return "result"
+    end
+    return "skip"
+  end,
+  block_mode = "line",
+})
 
 -- ---------------------------------------------------------------------------
--- 同期プロセス
+-- 出力パース
 -- ---------------------------------------------------------------------------
-
----同期 predict を実行して出力行を返す。
----@param line string 入力行
----@return string output predict の出力 (1行)
-local function sync_predict(line)
-  local job = ensure_job("sync")
-  if not job then
-    return ""
-  end
-
-  local req_id = sync_state.sent
-  sync_state.sent = sync_state.sent + 1
-
-  vim.fn.chansend(job, line .. "\n")
-
-  -- レスポンスが来るまで待つ (predict は送信順に出力する)
-  vim.wait(5000, function()
-    return sync_state.recv > req_id
-  end, 5)
-
-  if sync_state.recv <= req_id then
-    return ""
-  end
-
-  local out = table.remove(sync_state.out_queue, 1)
-  return out or ""
-end
 
 ---predict-tags 出力 "単語/品詞/読み ..." を単語と位置に分解する。
----@param out string predict の出力
+---@param out string predict の出力 (1行)
 ---@param line string 元の行 (位置計算用)
 ---@return string[] words
 ---@return number[] positions
@@ -198,6 +76,18 @@ local function parse_tokens(out, line)
   end
   return words, positions
 end
+
+---同期 predict を実行して出力行を返す。
+---@param line string 入力行
+---@return string output predict の出力 (1行)
+local function sync_predict(line)
+  local block = engine:sync_request(line)
+  return block and block[1] or ""
+end
+
+-- ---------------------------------------------------------------------------
+-- 同期プロセス
+-- ---------------------------------------------------------------------------
 
 ---Vaporetto で行を単語分割する。失敗時は空配列。
 ---日本語を含まない行は分割せず空配列を返す。
@@ -253,9 +143,8 @@ function M.tokenize_async(lines, on_done)
     on_done({})
     return
   end
-  local job = ensure_job("async")
-  if not job then
-    -- async プロセスがまだ ready でない場合は、同期にフォールバック
+  if not engine:ensure_job("async") then
+    -- async プロセスが使えない場合は同期にフォールバック
     local results = {}
     for _, item in ipairs(lines) do
       local words, positions = M.tokenize(item.line)
@@ -270,65 +159,19 @@ function M.tokenize_async(lines, on_done)
     return
   end
 
-  -- async プロセスが起動直後で ready でない場合、短く待つ
-  if not async_state.ready then
-    vim.wait(10000, function()
-      return async_state.ready
-    end, 10)
-  end
-
-  local req_base = async_state.sent
-  local results = {}
-  local expected = #lines
-  local received = 0
-  local done = false
-
-  for _, item in ipairs(lines) do
-    vim.fn.chansend(job, item.line .. "\n")
-    async_state.sent = async_state.sent + 1
-  end
-
-  local timer = vim.uv.new_timer()
-  timer:start(
-    0,
-    5,
-    vim.schedule_wrap(function()
-      if done then
-        return
-      end
-      while received < expected and async_state.recv > (req_base + received) do
-        local out = table.remove(async_state.out_queue, 1)
-        if out and out ~= "" then
-          local item = lines[received + 1]
-          local words, positions = parse_tokens(out, item.line)
-          results[received + 1] = {
-            lnum = item.lnum,
-            line = item.line,
-            words = words,
-            positions = positions,
-          }
-          received = received + 1
-        end
-      end
-
-      if received >= expected then
-        done = true
-        timer:stop()
-        pcall(timer.close, timer)
-        on_done(results)
-      elseif not chan_is_open(job) then
-        done = true
-        timer:stop()
-        pcall(timer.close, timer)
-        while received < expected do
-          local item = lines[received + 1]
-          results[received + 1] = { lnum = item.lnum, line = item.line, words = {}, positions = {} }
-          received = received + 1
-        end
-        on_done(results)
-      end
-    end)
-  )
+  engine:tokenize_async(lines, function(results)
+    local out = {}
+    for _, r in ipairs(results) do
+      local words, positions = parse_tokens(table.concat(r.block, "\n"), r.item.line)
+      out[#out + 1] = {
+        lnum = r.item.lnum,
+        line = r.item.line,
+        words = words,
+        positions = positions,
+      }
+    end
+    on_done(out)
+  end)
 end
 
 -- ---------------------------------------------------------------------------
@@ -351,35 +194,17 @@ local function get_words(line)
 end
 
 ---Vaporetto の単語分割結果を、spider の customPatterns に渡す境界関数に変換する。
----
----spider の関数パターンの規約 (spider.motion-logic 参照):
----   fn(line, searchOffset, key) -> number|false
----   line:        検索対象の行。backward のときは UTF-8 対応で反転済み。
----   searchOffset:現在位置 (1-based byte、backward 時は逆順座標)
----   key:        "w"|"e"|"b"|"ge"
----     w  = 次の単語の開始位置
----     e  = 次の単語の終端位置 (語の最後の文字の位置)
----     b  = 前の単語の開始位置 (line は反転済み、逆順座標で返す)
----     ge = 前の単語の終端位置 (spider が endOfWord を反転するため開始位置を返す)
----   戻り値:      searchOffset より大きい次の境界位置 (1-based byte)
----
 ---@param mode "word"|"bunsetsu" 境界の粒度
----@return fun(line: string, searchOffset: number, key: string): number|false
+---@return fun(line: string, searchOffset: number, key: string, backwards: boolean): number|false
 function M.pattern(mode)
   mode = mode or "word"
-  return function(line, searchOffset, key)
-    local backwards = key == "b" or key == "ge"
-
-    -- spider は backward のとき line を string.reverse (バイト反転) して渡す。
-    -- バイト反転は UTF-8 を壊すが、再び :reverse() すると元のバイト列に戻る。
-    local original = backwards and line:reverse() or line
-
-    local words, positions = get_words(original)
+  return function(line, searchOffset, key, backwards)
+    local words, positions = get_words(line)
     if #words == 0 then
       return false
     end
 
-    -- 文節境界 (開始位置と終端位置)
+    -- 文節境界 (開始位置と終端位置)。位置はすべてバイト座標
     local boundaries = {}
     local boundaryEnds = {}
     for i in ipairs(words) do
@@ -406,33 +231,19 @@ function M.pattern(mode)
       return boundaries[i]
     end
 
-    if backwards then
-      -- 逆順座標系: 反転済み行の座標で「searchOffset より大きい最小」を返す
-      local candidates = {}
-      for i in ipairs(boundaries) do
-        local t = target(i)
-        local rev = #line - t + 1
-        if rev > searchOffset then
-          candidates[#candidates + 1] = rev
+    -- 移動方向にある最も近い境界を返す (元の行のバイト座標)
+    local best
+    for i in ipairs(boundaries) do
+      local t = target(i)
+      if backwards then
+        if t < searchOffset and (not best or t > best) then
+          best = t
         end
+      elseif t > searchOffset and (not best or t < best) then
+        best = t
       end
-      if #candidates == 0 then
-        return false
-      end
-      return math.min(unpack(candidates))
-    else
-      local candidates = {}
-      for i in ipairs(boundaries) do
-        local t = target(i)
-        if t > searchOffset then
-          candidates[#candidates + 1] = t
-        end
-      end
-      if #candidates == 0 then
-        return false
-      end
-      return math.min(unpack(candidates))
     end
+    return best or false
   end
 end
 
@@ -487,24 +298,8 @@ end
 
 ---常駐プロセスを終了する。
 function M.stop()
-  for _, state in ipairs({ sync_state, async_state }) do
-    if chan_is_open(state.job) then
-      vim.fn.jobstop(state.job)
-    end
-    state.job = nil
-    state.ready = false
-    state.in_buffer = ""
-    state.out_queue = {}
-    state.sent = 0
-    state.recv = 0
-  end
+  engine:stop()
   linecache = nil
-end
-
----同期プロセスが起動しているか。
----@return boolean
-function M.is_running()
-  return chan_is_open(sync_state.job)
 end
 
 return M

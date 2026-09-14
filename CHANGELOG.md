@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `_core.tokenizer_engine`: Vibrato / Vaporetto 両バックエンドの常駐プロセス
+  管理 (sync / async、pty の行分割、準備待ち、非同期バッチ) を一元化する
+  共通エンジン。偽トークナイザを使った結合テストで検証される
+
+### Changed
+
+- vibrato.lua / vaporetto.lua の重複していたプロセス管理 (約 400 行) を
+  tokenizer_engine に統合。vibrato の非同期フォールバックが 1 行あたり
+  2 回プロセスに問い合わせていた無駄も解消
+
+### Added
+
 - テキストオブジェクトを visual mode で使ったとき、選択範囲を置き換えずに
   元のアンカー (getpos("v")) を固定したまま延長するようになった
 - 文末移動・テキストオブジェクトが空行による段落境界を尊重するように

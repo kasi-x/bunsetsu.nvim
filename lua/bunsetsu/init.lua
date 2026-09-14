@@ -24,14 +24,7 @@ function M.setup(opts)
 
   local augroup = vim.api.nvim_create_augroup("bunsetsu", { clear = true })
 
-  -- 全文モード・一文モードのキャッシュをバッファ変更時に無効化。
-  -- TextChanged 系は変更行のみ非同期で再分割する。
-  -- 行数が変わる可能性のある操作 (undo/redo 等) では全破棄する。
-  local model_name = function()
-    return configuration.DATA.vibrato.dict
-      or configuration.DATA.vaporetto.model
-      or configuration.DATA.model
-  end
+  local model_name = full.current_model
 
   -- 変更行の再分割は debounce 設定 (ms) でまとめる。insert 中の連続変更
   -- (TextChangedI) のたびにトークナイザへ投げないようにするため、タイマーは
@@ -170,7 +163,7 @@ end
 ---全文モードの segment 一覧を返す (flash matcher の基盤)。
 ---@return FullSegment[]
 function M.full_segments()
-  return full.full(configuration.DATA.vibrato.dict or configuration.DATA.vaporetto.model)
+  return full.full(full.current_model())
 end
 
 ---現在バッファの形態素を品詞ごとにアンダーラインで色付けする。
