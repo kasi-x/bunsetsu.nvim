@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `_commands/motion.lua`: spider 非依存の文節移動モーション
+  (`w` / `b` / `e` / `ge` 相当)。spider なしでも文節移動が可能に
 - `merge_nouns` オプション: 連続する名詞を一つの segment にまとめる
   (Vibrato / Vaporetto 使用時。例: 形態素+解析 → 形態素解析)
 - `sentence.extra_end_chars`: カスタム文末文字の追加
