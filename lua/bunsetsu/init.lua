@@ -134,6 +134,13 @@ function M.prev_sentence_end(count)
   return require("bunsetsu._commands.sentence").prev_end(count or 1)
 end
 
+---カーソル行が日本語を含むかどうかを判定する。
+---日本語なら bunsetsu の文末移動、英語なら Vim 標準の文移動を使う。
+---@return boolean
+function M.is_japanese_line()
+  return lang.has_japanese(vim.fn.getline("."))
+end
+
 ---指定語の辞書形(原形)を UniDic から引く。
 ---
 ---Vaporetto で分割した語の表層形を渡すと、原形・読み・品詞を返す。
