@@ -134,6 +134,30 @@ vim.keymap.set("o", "(", function()
 end, { desc = "Previous sentence end" })
 ```
 
+**Smart mode switching (recommended):** map `)` / `(` to automatically
+switch between bunsetsu sentence motion and Vim's built-in motion based
+on the cursor line's language:
+
+```lua
+vim.keymap.set({ "n", "x", "o" }, ")", function()
+    if require("bunsetsu").is_japanese_line() then
+        require("bunsetsu").next_sentence_end(vim.v.count1)
+    else
+        vim.cmd("normal! " .. vim.v.count1 .. ")")
+    end
+end, { desc = "Next sentence (smart)" })
+vim.keymap.set({ "n", "x", "o" }, "(", function()
+    if require("bunsetsu").is_japanese_line() then
+        require("bunsetsu").prev_sentence_end(vim.v.count1)
+    else
+        vim.cmd("normal! " .. vim.v.count1 .. "(")
+    end
+end, { desc = "Previous sentence (smart)" })
+```
+
+English-only buffers keep Vim's native sentence motion; Japanese and
+mixed lines use bunsetsu's Japanese-aware detection.
+
 ### Text objects: sentence & phrase
 
 `is` / `as` select the inner / outer sentence, `iW` / `aW` the inner / outer

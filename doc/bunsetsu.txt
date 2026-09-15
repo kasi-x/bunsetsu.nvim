@@ -245,6 +245,17 @@ operator-pending の `)` / `(` にも対応する。`d)` / `c(` / `y2)` のよ�
     vim.keymap.set({ "x", "o" }, "aW", function() textobj.phrase(true) end)
 <
 
+自動切り替えキーマップ (推奨): 日本語行では bunsetsu の文末移動、
+英語行では Vim 標準の文移動を使う。>lua
+    vim.keymap.set({ "n", "x", "o" }, ")", function()
+        if require("bunsetsu").is_japanese_line() then
+            require("bunsetsu").next_sentence_end(vim.v.count1)
+        else
+            vim.cmd("normal! " .. vim.v.count1 .. ")")
+        end
+    end, { desc = "Next sentence (smart)" })
+<
+
 ================================================================================
 8. コマンド                                              *bunsetsu-command*
 
