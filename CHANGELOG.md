@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- テキストオブジェクト (is / as / iW / aW) が nvim-spider なしで動作するよう
+  フォールバックを実装。spider があれば setEndpoints に委譲し、無ければ
+  カーソル移動による直接選択 (operator-pending は v で一時 visual に入る手法)
 - `_commands/motion.lua`: spider 非依存の文節移動モーション
   (`w` / `b` / `e` / `ge` 相当)。spider なしでも文節移動が可能に
 - `bunsetsu.is_japanese_line()`: カーソル行の言語判定

@@ -221,8 +221,8 @@ flash のラベルが正しく付きます。
   IndirectQuoteException を参考にした純 Lua 実装。外部ランタイム不要)。
 
 operator-pending の `)` / `(` にも対応する。`d)` / `c(` / `y2)` のように
-オペレータと組み合わせて使える (範囲の確定は nvim-spider の setEndpoints
-経由)。
+オペレータと組み合わせて使える (nvim-spider があれば範囲の確定を
+setEndpoints に委譲)。
 
 >lua
     vim.keymap.set("o", ")", function()
@@ -233,7 +233,8 @@ operator-pending の `)` / `(` にも対応する。`d)` / `c(` / `y2)` のよ�
     end, { desc = "Previous sentence end" })
 <
 
-テキストオブジェクト (選択範囲の確定は spider 経由):
+テキストオブジェクト (nvim-spider があれば選択範囲の確定を委譲。
+無い場合もカーソル移動による直接選択で動作する):
     is / as   カーソル下の文 (内側 / 外側。内側は文末文字を含まない)
     iW / aW   カーソル下の文節 (外側は後続の空白を含める)
 

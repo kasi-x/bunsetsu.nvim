@@ -32,6 +32,13 @@ function M.set_cursor(lnum, col)
   vim.api.nvim_win_set_cursor(0, M.cursor_pos(lnum, col))
 end
 
+---カーソルを移動する。col0 は 0始まりバイト位置。
+---@param lnum number
+---@param col0 number
+function M.set_cursor0(lnum, col0)
+  vim.api.nvim_win_set_cursor(0, { lnum, col0 })
+end
+
 ---fn をデバウンスしつつ呼ぶ関数を返す。呼び出し引数は fn へそのまま渡る。
 ---@param group number? augroup id (現状は未使用。将来的に autocmd 連携用)
 ---@param fn function デバウンスして実行する処理

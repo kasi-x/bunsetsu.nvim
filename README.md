@@ -162,9 +162,11 @@ mixed lines use bunsetsu's Japanese-aware detection.
 
 `is` / `as` select the inner / outer sentence, `iW` / `aW` the inner / outer
 phrase (bunsetsu) under the cursor — on Japanese and English text alike.
-Selection handling (`selection`, `virtualedit`, forced motions `v` / `V` /
-CTRL-V) is delegated to nvim-spider's `setEndpoints`, so text objects and
-operators behave exactly like spider motions:
+They work without nvim-spider. When spider is installed, selection handling
+(`selection`, `virtualedit`, forced motions `v` / `V` / CTRL-V) is delegated
+to its `setEndpoints`, so text objects and operators behave exactly like
+spider motions; without it, bunsetsu selects the range with direct cursor
+movement:
 
 ```lua
 local textobj = require("bunsetsu._commands.textobj")

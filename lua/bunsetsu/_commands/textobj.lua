@@ -1,8 +1,9 @@
 ---テキストオブジェクト (文・文節)。
 --
--- 範囲の確定 (選択開始・selection 設定・virtualedit・強制モーションの処理)
--- は nvim-spider の setEndpoints (spider.extras.operator-pending) に委譲する。
--- そのため operator-pending と visual mode の両方で動作する。
+-- nvim-spider があれば範囲の確定 (選択開始・selection 設定・virtualedit・
+-- 強制モーションの処理) を setEndpoints (spider.extras.operator-pending) に
+-- 委譲する。無い場合はカーソル移動による直接選択にフォールバックする
+-- (operator-pending では v で一時的に visual に入る古典的手法)。
 --
 -- 使い方 (ユーザー設定例):
 -- >lua
@@ -25,7 +26,52 @@ local util = require("bunsetsu._core.util")
 
 local M = {}
 
----範囲を spider 経由で選択する。
+---spider 無しで範囲を選択する (motion.nvim / spider extras と同じ手法)。
+---visual に入ってから両端を置く。operator-pending ではマップ終了後に
+---オペレータがこの選択範囲に適用される。強制モーション (dV / d<C-v>) も反映。
+---@param lnum1 number
+---@param col1 number 1始まりバイト
+---@param lnum2 number
+---@param col2 number 1始まりバイト
+---@return boolean
+local function visual_start(lnum1, col1, lnum2, col2)
+  -- operator-pending のモードは mode() では "n" にしかならないため mode(true) を使う
+  local mode = vim.fn.mode(true)
+  local vmode = "v"
+  if mode == "noV" then
+    vmode = "V"
+  elseif mode == "no\22" then
+    vmode = "\22"
+  end
+  -- 最初に visual に入る (両端の位置は visual 中でのみ有効なことがあるため)
+  vim.cmd("noautocmd normal! " .. vmode)
+  vim.api.nvim_win_set_cursor(0, { lnum1, col1 - 1 })
+  vim.cmd("noautocmd normal! o")
+  vim.api.nvim_win_set_cursor(0, { lnum2, col2 - 1 })
+  return true
+end
+
+---spider 無しで範囲を選択する。visual mode のときはアンカーを固定したまま
+---カーソルを端へ動かし、それ以外は visual 選択を作る。
+---@param lnum1 number
+---@param col1 number 1始まりバイト
+---@param lnum2 number
+---@param col2 number 1始まりバイト
+---@return boolean
+local function select_direct(lnum1, col1, lnum2, col2)
+  local mode = vim.fn.mode()
+  if mode == "v" or mode == "V" or mode == "\22" then
+    if mode ~= "v" then
+      vim.cmd("noautocmd normal! v")
+    end
+    util.set_cursor0(lnum2, col2 - 1)
+  else
+    visual_start(lnum1, col1, lnum2, col2)
+  end
+  return true
+end
+
+---spider の setEndpoints で範囲を選択する。無い場合は直接選択にフォールバック。
 ---@param lnum1 number
 ---@param col1 number 1始まりバイト
 ---@param lnum2 number
@@ -34,17 +80,13 @@ local M = {}
 ---@return boolean
 function M.select_range(lnum1, col1, lnum2, col2, opts)
   local ok, op = pcall(require, "spider.extras.operator-pending")
-  if not ok then
-    vim.notify(
-      "bunsetsu: この機能には nvim-spider が必要です (選択範囲の確定を spider に委譲しています)",
-      vim.log.levels.WARN
-    )
-    return false
+  if ok then
+    return op.setEndpoints({ lnum1, col1 - 1 }, { lnum2, col2 - 1 }, opts)
   end
-  return op.setEndpoints({ lnum1, col1 - 1 }, { lnum2, col2 - 1 }, opts)
+  return select_direct(lnum1, col1, lnum2, col2)
 end
 
----オブジェクトの範囲 (start〜stop) を spider 経由で確定する。
+---オブジェクトの範囲 (start〜stop) を確定する。
 ---visual mode のときは元のアンカー (getpos("v")) を固定し、カーソル側の端を
 ---オブジェクトの境界まで延長する (選択の置き換えではなく延長)。
 ---@param start { lnum: number, col: number } オブジェクトの始端 (1始まりバイト)
@@ -54,21 +96,21 @@ end
 local function apply_region(start, stop, opts)
   local mode = vim.fn.mode()
   if mode == "v" or mode == "V" or mode == "\22" then
-    local ok, op = pcall(require, "spider.extras.operator-pending")
-    if not ok then
-      vim.notify(
-        "bunsetsu: この機能には nvim-spider が必要です (選択範囲の確定を spider に委譲しています)",
-        vim.log.levels.WARN
-      )
-      return false
-    end
     local v = vim.fn.getpos("v")
     local anchor = { lnum = v[2], col = v[3] - 1 }
     local cursor = vim.api.nvim_win_get_cursor(0)
     local going_forward = cursor[1] > anchor.lnum
       or (cursor[1] == anchor.lnum and cursor[2] >= anchor.col)
     local far = going_forward and stop or start
-    return op.setEndpoints({ anchor.lnum, anchor.col }, { far.lnum, far.col - 1 }, opts)
+    local ok, op = pcall(require, "spider.extras.operator-pending")
+    if ok then
+      return op.setEndpoints({ anchor.lnum, anchor.col }, { far.lnum, far.col - 1 }, opts)
+    end
+    if mode ~= "v" then
+      vim.cmd("noautocmd normal! v")
+    end
+    util.set_cursor0(far.lnum, far.col - 1)
+    return true
   end
   return M.select_range(start.lnum, start.col, stop.lnum, stop.col, opts)
 end
@@ -239,7 +281,7 @@ function M.phrase_region(outer)
 end
 
 ---文のテキストオブジェクト (is / as 相当)。
----spider の setEndpoints で選択範囲を確定する。
+---nvim-spider があれば setEndpoints で、無ければカーソル移動で選択範囲を確定する。
 ---@param outer boolean
 ---@return boolean
 function M.sentence(outer)
