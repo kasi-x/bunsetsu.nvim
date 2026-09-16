@@ -43,6 +43,26 @@ describe("bunsetsu.setup() (user-facing integration)", function()
     assert.is_true(ok)
   end)
 
+  it("merges setup() options into the configuration (tiered options)", function()
+    local config = require("bunsetsu._core.configuration")
+    bunsetsu.setup({
+      debounce = 123,
+      sentence = { extra_end_chars = "♪" },
+      highlight = { enabled = true },
+    })
+    assert.are.equal(123, config.DATA.debounce)
+    assert.are.equal("♪", config.DATA.sentence.extra_end_chars)
+    assert.is_true(config.DATA.highlight.enabled)
+    -- 未指定の既定値は残る
+    assert.are.equal(500, config.DATA.jp_scan_lines)
+    -- 元に戻す
+    bunsetsu.setup({
+      debounce = 50,
+      sentence = { extra_end_chars = "" },
+      highlight = { enabled = false },
+    })
+  end)
+
   it("does not error on ascii-only buffers", function()
     bunsetsu.setup({})
     vim.api.nvim_buf_set_lines(0, 0, -1, false, { "hello world" })

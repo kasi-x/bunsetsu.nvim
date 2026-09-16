@@ -1,4 +1,60 @@
 --- All functions and data to help customize `bunsetsu` for this user.
+---
+--- オプションは目的別に 3 つの層に分かれる。
+---   1. 基本 — バックエンドの選択と見た目。ほとんどのユーザーはここだけ。
+---   2. 調整 — 性能・外部連携の微調整。
+---   3. 仕様 — 「文節」「文」の区切り規則そのものを変える。
+---
+--- 詳細は README の Configuration と doc/bunsetsu.txt の *bunsetsu-config*。
+
+---@class Bunsetsu.Config.Vibrato
+---@field cmd string tokenize CLI のパス。既定 "vibrato"
+---@field dict string 辞書 (.dic.zst) のパス。空なら Vibrato 無効 (既定)
+---@field pos boolean 品詞・原形・読みの抽出。false で高速化
+---   (highlight / lemma は使えなくなる)。既定 true
+
+---@class Bunsetsu.Config.Vaporetto
+---@field cmd string predict CLI のパス。既定 "predict"
+---@field model string モデル (.model.zst) のパス。空なら Vaporetto 無効 (既定)
+
+---@class Bunsetsu.Config.Lemma
+---@field dict_path string UniDic TSV (surface<TAB>lemma<TAB>reading<TAB>pos)。
+---   空なら辞書引き無効 (既定)
+
+---@class Bunsetsu.Config.Highlight
+---@field enabled boolean 品詞ハイライトの有効化。既定 false
+
+---@class Bunsetsu.Config.Sentence
+---@field extra_end_chars string 既定の文末文字 (。！？…．｡) に追加する文末
+---   文字。既定 ""
+
+---@class Bunsetsu.Config
+-- == 基本: バックエンドと見た目 ==
+-- 同梱 TinySegmenter の文節モデル ("knbc_bunsetu" / "wpci_bunsetu" /
+-- "jeita" / "rwcp")。vibrato / vaporetto 未設定時のみ使われる。
+---@field model string
+-- 品詞ごとのアンダーライン表示。
+---@field highlight Bunsetsu.Config.Highlight
+-- == 調整: 性能・外部連携 ==
+-- Vibrato バックエンド (dict を設定すると有効化)。
+---@field vibrato Bunsetsu.Config.Vibrato
+-- Vaporetto バックエンド (model を設定すると有効化)。
+---@field vaporetto Bunsetsu.Config.Vaporetto
+-- UniDic 辞書引き。
+---@field lemma Bunsetsu.Config.Lemma
+-- 全文キャッシュ無効化のデバウンス (ms)。
+---@field debounce number
+-- 日本語検出でバッファ先頭から走査する行数。
+---@field jp_scan_lines number
+-- == 仕様: 区切りの規則 ==
+-- 強制的に分節区切りを入れる文字のパターン ('[...]' の文字クラスのみ)。
+---@field splitpat string
+-- :BunsetsuSplit が挿入する区切り文字列。
+---@field splitsep string
+-- 連続する名詞を一つの文節にまとめる (Vibrato / Vaporetto 使用時)。
+---@field merge_nouns boolean
+-- 文末判定の追加設定。
+---@field sentence Bunsetsu.Config.Sentence
 
 local M = {}
 

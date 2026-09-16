@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 設定オプションを目的別の 3 つの層に再編して文書化
+  (README と doc/bunsetsu.txt の設定セクション):
+  3.1 基本 (バックエンドと見た目) / 3.2 調整 (性能・外部連携) /
+  3.3 仕様 (区切りの規則)。`Bunsetsu.Config` に LuaCATS アノテーションを追加
+  (LSP のホバーで全オプションと既定値が参照可能)
+- ドキュメントと既定値の整合を検証するテスト
+  (オプション追加時に README / vimdoc への記載漏れを検出)
+
+### Added
+
 - テキストオブジェクト (is / as / iW / aW) が nvim-spider なしで動作するよう
   フォールバックを実装。spider があれば setEndpoints に委譲し、無ければ
   カーソル移動による直接選択 (operator-pending は v で一時 visual に入る手法)

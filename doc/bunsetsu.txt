@@ -6,6 +6,9 @@ CONTENTS                                                    *bunsetsu-contents*
 1. 概要...................................|bunsetsu-overview|
 2. インストール...........................|bunsetsu-install|
 3. 設定...................................|bunsetsu-config|
+    3.1 基本オプション......................|bunsetsu-config-basic|
+    3.2 調整オプション......................|bunsetsu-config-tuning|
+    3.3 仕様オプション......................|bunsetsu-config-spec|
 4. nvim-spider 統合.......................|bunsetsu-spider|
 5. バックエンド...........................|bunsetsu-backends|
 6. flash.nvim 統合........................|bunsetsu-flash|
@@ -54,11 +57,47 @@ lazy.nvim: >lua
 ================================================================================
 3. 設定                                                  *bunsetsu-config*
 
-設定は vim.g.bunsetsu_configuration にテーブルで渡します。
+設定は require("bunsetsu").setup({...}) で渡します (vim.g.bunsetsu_configuration
+に代入する方法もあります。両方はマージされ setup() が優先されます)。
+何も設定しなくても動作します (同梱 TinySegmenter を使用。外部バイナリ不要)。
+
+オプションは目的別に 3 つの層に分かれています。ほとんどの人は 3.1 だけで
+十分です。
+
+3.1 基本オプション (バックエンドと見た目)     *bunsetsu-config-basic*
 
 model            同梱 TinySegmenter バックエンドの文節区切りモデル名。
                  省略値: "knbc_bunsetu"
                  設定可能: "knbc_bunsetu" "wpci_bunsetu" "jeita" "rwcp"
+highlight        品詞ハイライトの設定テーブル。
+                 - enabled: true で品詞ごとのアンダーライン表示を有効化
+                   (省略値: false)
+
+バックエンドの切り替えは次のどれかを設定するだけで行えます:
+- vibrato.dict に辞書を設定 → Vibrato (形態素解析。品詞・原形・読み付き)
+- vaporetto.model にモデルを設定 → Vaporetto (高速トークナイザ)
+- どちらも未設定 → 同梱 TinySegmenter (省略値)
+ビルド・ダウンロード方法は |bunsetsu-backends|。
+
+3.2 調整オプション (性能・外部連携)           *bunsetsu-config-tuning*
+
+vibrato          Vibrato バックエンドの設定テーブル。
+                 - cmd: tokenize CLI のパス (省略値: "vibrato")
+                 - dict: 辞書 (.dic.zst) のパス (空なら Vibrato 無効)
+                 - pos: 品詞・原形・読みの抽出 (省略値: true)。
+                   false で高速化 (highlight / lemma は使えなくなる)
+vaporetto        Vaporetto バックエンドの設定テーブル。
+                 - cmd: predict CLI のパス (省略値: "predict")
+                 - model: モデル (.model.zst) のパス
+lemma            UniDic 辞書引きの設定テーブル。
+                 - dict_path: surface<TAB>lemma<TAB>reading<TAB>pos の TSV
+debounce         全文キャッシュ無効化のデバウンス(ms)。
+                 省略値: 50
+jp_scan_lines    日本語検出でバッファ先頭から走査する行数。
+                 省略値: 500
+
+3.3 仕様オプション (区切りの規則)             *bunsetsu-config-spec*
+
 splitpat         強制的に分節区切りを入れる文字のパターン。シンプルな文字
                  クラス '[...]' のみ解釈する (多バイト文字も可)。
                  一致した文字は前の文節に残り、直後が強制境界になる。
@@ -67,26 +106,26 @@ splitpat         強制的に分節区切りを入れる文字のパターン。
                  省略値: "[?!、。]"
 splitsep         :BunsetsuSplit の区切り文字列。
                  省略値: " "
-debounce         全文キャッシュ無効化のデバウンス(ms)。
-                 省略値: 50
-vibrato          Vibrato バックエンドの設定テーブル。
-                 - cmd: tokenize CLI のパス (省略値: "vibrato")
-                 - dict: 辞書 (.dic.zst) のパス (空なら Vibrato 無効)
-vaporetto        Vaporetto バックエンドの設定テーブル。
-                 - cmd: predict CLI のパス (省略値: "predict")
-                 - model: モデル (.model.zst) のパス
-lemma            UniDic 辞書引きの設定テーブル。
-                 - dict_path: surface<TAB>lemma<TAB>reading<TAB>pos の TSV
-highlight        品詞ハイライトの設定テーブル。
-                 - enabled: true で有効化 (省略値: false)
+merge_nouns      連続する名詞を一つの文節にまとめる (Vibrato / Vaporetto
+                 使用時)。例: 形態素+解析 → 形態素解析。
+                 省略値: false
+sentence         文末判定の設定テーブル。
+                 - extra_end_chars: 既定の文末文字 (。！？…．｡) に追加する
+                   文末文字。省略値: ""
 
-設定例: >lua
-    vim.g.bunsetsu_configuration = {
+設定例 (TinySegmenter のまま POS ハイライトだけ有効化): >lua
+    require("bunsetsu").setup({
+        highlight = { enabled = true },
+    })
+<
+
+設定例 (Vibrato へ切り替え): >lua
+    require("bunsetsu").setup({
         vibrato = {
             cmd = "/path/to/tokenize",
             dict = "/path/to/system.dic.zst",
         },
-    }
+    })
 <
 
 ================================================================================

@@ -199,46 +199,50 @@ Japanese-aware boundaries as the motions.
 
 ## Configuration
 
-Configuration goes in `vim.g.bunsetsu_configuration`:
+Zero configuration works out of the box — `require("bunsetsu").setup()` alone
+gives you phrase segmentation with the bundled TinySegmenter (no external
+binaries). Options are grouped by purpose:
+
+- **Essential** — backend choice and appearance. This is all most people need.
+- **Fine-tuning** — performance and external-tool integration knobs.
+- **Specification** — options that change what counts as a "bunsetsu" or a
+  "sentence" end.
 
 ```lua
-vim.g.bunsetsu_configuration = {
-    -- Phrase-segmentation model for the bundled TinySegmenter backend
+require("bunsetsu").setup({
+    -- == Essential: backend & appearance ==
+    -- Bundled TinySegmenter model (used unless a backend below is configured)
     model = "knbc_bunsetu", -- knbc_bunsetu / wpci_bunsetu / jeita / rwcp
-    -- Force a phrase boundary after these characters.
-    -- A simple character class like [?!、。]; set to "" to disable
-    splitpat = "[?!、。]",
-    -- Separator inserted by :BunsetsuSplit
-    splitsep = " ",
-    -- Debounce (ms) for invalidating the whole-buffer cache
-    debounce = 50,
-    -- Vibrato backend (optional; dictionary set = enabled)
-    vibrato = {
-        cmd = "vibrato", -- tokenize CLI
-        dict = "",       -- MeCab-format dictionary path
-        pos = true,      -- extract POS/lemma/reading (needed for highlight & lemma)
-    },
-    -- Merge consecutive nouns into one segment (Vibrato/Vaporetto only)
-    merge_nouns = false,
-    -- Custom sentence-ending characters (added to 。！？…．｡)
-    sentence = { extra_end_chars = "" },
-    -- Number of lines to scan for Japanese detection
-    jp_scan_lines = 500,
-    -- Vaporetto backend (optional)
-    vaporetto = {
-        cmd = "predict", -- predict CLI
-        model = "",      -- .model.zst path
-    },
-    -- UniDic lemma lookup (optional)
-    lemma = {
-        dict_path = "",  -- TSV: surface\tlemma\treading\tpos
-    },
-    -- POS underline highlighting (optional)
-    highlight = {
-        enabled = false,
-    },
-}
+    -- POS underline highlighting
+    highlight = { enabled = false },
+
+    -- == Fine-tuning: performance & external tools ==
+    -- Setting vibrato.dict switches the backend to Vibrato:
+    -- vibrato = { cmd = "vibrato", dict = "/path/to/system.dic.zst" },
+    -- vibrato.pos = false skips POS/lemma/reading extraction (faster
+    -- motions; highlight & lemma become unavailable)
+    -- Setting vaporetto.model switches the backend to Vaporetto:
+    -- vaporetto = { cmd = "predict", model = "/path/to/model.zst" },
+    -- UniDic TSV (surface\tlemma\treading\tpos) for lemma/reading lookup:
+    -- lemma = { dict_path = "/path/to/unidic.tsv" },
+    debounce = 50,       -- ms to batch whole-buffer cache invalidation
+    jp_scan_lines = 500, -- lines scanned from the top for Japanese detection
+
+    -- == Specification: segmentation & sentence rules ==
+    splitpat = "[?!、。]",  -- forced segment boundaries ("" disables)
+    splitsep = " ",        -- separator inserted by :BunsetsuSplit
+    merge_nouns = false,   -- merge consecutive nouns (Vibrato/Vaporetto)
+    sentence = { extra_end_chars = "" }, -- extra sentence-ending characters
+})
 ```
+
+The same table can also be assigned to `vim.g.bunsetsu_configuration`
+(e.g. in `init.lua`, before the plugin loads). The two are merged, with
+`setup()` winning.
+
+**Rule of thumb:** set `vibrato.dict` or `vaporetto.model` to switch the
+segmentation backend; leave both unset to stay on the bundled TinySegmenter.
+See [Backends](#backends) for build and download instructions.
 
 ### Backends
 

@@ -3,6 +3,9 @@ bunsetsu-api	bunsetsu.txt	/*bunsetsu-api*
 bunsetsu-backends	bunsetsu.txt	/*bunsetsu-backends*
 bunsetsu-command	bunsetsu.txt	/*bunsetsu-command*
 bunsetsu-config	bunsetsu.txt	/*bunsetsu-config*
+bunsetsu-config-basic	bunsetsu.txt	/*bunsetsu-config-basic*
+bunsetsu-config-spec	bunsetsu.txt	/*bunsetsu-config-spec*
+bunsetsu-config-tuning	bunsetsu.txt	/*bunsetsu-config-tuning*
 bunsetsu-contents	bunsetsu.txt	/*bunsetsu-contents*
 bunsetsu-develop	bunsetsu.txt	/*bunsetsu-develop*
 bunsetsu-flash	bunsetsu.txt	/*bunsetsu-flash*
