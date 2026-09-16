@@ -36,15 +36,16 @@ function M.check()
   local vs = require("bunsetsu._commands.vibrato_setup")
   local dict = config.DATA.vibrato.dict
   local cmd = config.DATA.vibrato.cmd or "vibrato"
-  if dict == "auto" then
-    -- resolve_data で解決済みのはずだが、生の "auto" が見えた場合は状態を案内
+  if config.DATA.vibrato.auto_setup then
+    -- resolve_data で管理導入の解決済み。manifest が生で見える場合は案内
     local status = vs.status()
     if status then
-      vim.health.info('vibrato.dict = "auto": ' .. status)
+      vim.health.ok("vibrato.auto_setup: " .. status)
     else
       vim.health.info(
-        'vibrato.dict = "auto": まだ導入されていません。'
-          .. ":BunsetsuVibratoSetup で導入できます (cargo / tar / xz が必要)"
+        "vibrato.auto_setup: まだ導入されていません"
+          .. "(未導入の間は TinySegmenter で動作します)。"
+          .. ":BunsetsuVibratoSetup で手動導入もできます"
       )
     end
   elseif dict and dict ~= "" then
@@ -76,7 +77,9 @@ function M.check()
     vim.health.info("Vibrato 未設定 (同梱 TinySegmenter を使用します)")
     local managed = vs.status()
     if managed then
-      vim.health.info(managed .. ' — vibrato.dict = "auto" でこの導入を使えます')
+      vim.health.info(
+        managed .. " — vibrato = { auto_setup = true } でこの導入を使えます"
+      )
     end
 
     local segment = require("bunsetsu._core.segment")

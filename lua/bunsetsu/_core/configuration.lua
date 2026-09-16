@@ -9,12 +9,14 @@
 
 ---@class Bunsetsu.Config.Vibrato
 ---@field cmd string tokenize CLI のパス。既定 "vibrato"
----@field dict string 辞書 (.dic.zst) のパス。空なら Vibrato 無効 (既定)。
----   "auto" で stdpath("data") 配下への自動セットアップ (未導入なら
----   setup() 時に cargo ビルドと辞書ダウンロードを実行する)
+---@field dict string 辞書 (.dic.zst) のパス。空なら Vibrato 無効 (既定)
+---@field auto_setup boolean true で自動セットアップを有効化。CLI の
+---   cargo ビルドと辞書のダウンロードを stdpath("data")/bunsetsu/vibrato
+---   配下へ行い、cmd / dict をその導入へ差し替える。未導入なら setup() 時
+---   にバックグラウンドで実行し、完了までの間は TinySegmenter で動作する
 ---@field pos boolean 品詞・原形・読みの抽出。false で高速化
 ---   (highlight / lemma は使えなくなる)。既定 true
----@field flavor string 自動セットアップ (dict = "auto") の辞書の種類。
+---@field flavor string 自動セットアップ (auto_setup = true) の辞書の種類。
 ---   "ipadic" (既定) / "unidic-mecab" / "unidic-cwj" / "jumandic" /
 ---   "naist-jdic"
 ---@field version string 自動セットアップでビルドする vibrato のタグ。
@@ -83,8 +85,11 @@ local _DEFAULTS = {
     -- 品詞・原形・読みの抽出を有効化 (highlight / lemma に必要)。
     -- false で高速化 (文節移動には影響しない)
     pos = true,
-    -- dict = "auto" で stdpath("data") 配下への自動セットアップを有効化。
-    -- 辞書の種類とビルド元タグ (vibrato_setup.run の既定値)。
+    -- true で自動セットアップ: tokenize CLI を cargo でビルドし、辞書を
+    -- stdpath("data")/bunsetsu/vibrato 配下へ導入して cmd / dict を差し替える。
+    -- 未導入なら setup() 時にバックグラウンドで実行する
+    auto_setup = false,
+    -- 自動セットアップの辞書の種類とビルド元タグ
     flavor = "ipadic",
     version = "v0.5.2",
   },
@@ -140,17 +145,19 @@ function M.resolve_data(data)
   M.DATA = vim.tbl_deep_extend("force", M.DATA, vim.g.bunsetsu_configuration or {})
   M.DATA = vim.tbl_deep_extend("force", M.DATA, data or {})
 
-  M.resolve_vibrato_auto()
+  M.resolve_vibrato_managed()
 
   return M.DATA
 end
 
----dict = "auto" (自動セットアップ) の解決。
----manifest があれば実パスへ置換し、無ければバックエンドを無効化して
----セットアップ待ちフラグを立てる (lifecycle.setup が自動実行する)。
-function M.resolve_vibrato_auto()
+---vibrato.auto_setup の解決。
+---管理導入 (stdpath("data") 配下) の manifest があれば cmd / dict を
+---そのパスへ差し替える。無い場合はバックエンドを無効化してセットアップ
+---待ちフラグを立てる (lifecycle.setup が自動実行する)。
+---auto_setup が false なら何もしない (cmd / dict はユーザー指定どおり)。
+function M.resolve_vibrato_managed()
   local v = M.DATA.vibrato
-  if not v or v.dict ~= "auto" then
+  if not v or not v.auto_setup then
     M._vibrato_auto_pending = false
     return
   end

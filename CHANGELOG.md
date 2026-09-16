@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Vibrato バックエンドの自動セットアップ
   (`:BunsetsuVibratoSetup` / `bunsetsu.vibrato_setup()` /
-  `vibrato = { dict = "auto" }`)。tokenize CLI の cargo ビルドと辞書
+  `vibrato = { auto_setup = true }`)。tokenize CLI の cargo ビルドと辞書
   (ipadic / unidic-mecab / unidic-cwj / jumandic / naist-jdic) の
   ダウンロードを stdpath("data") 配下へ行い、完了後にバックエンドへ反映
 - 設定オプションを目的別の 3 つの層に再編して文書化

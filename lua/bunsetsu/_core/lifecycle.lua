@@ -16,7 +16,7 @@ function M.setup(opts)
   configuration.initialize_data_if_needed()
   configuration.resolve_data(opts)
 
-  -- vibrato.dict = "auto" で未導入のときはバックグラウンドでセットアップする
+  -- vibrato.auto_setup で未導入のときはバックグラウンドでセットアップする
   -- (cargo ビルドのため数分かかることがある。完了時にバックエンドが切替わる)
   if configuration.consume_auto_setup_needed() then
     vim.schedule(function()

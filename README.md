@@ -44,8 +44,8 @@ or [Vaporetto](https://github.com/daac-tools/vaporetto) tokenizers instead.
 - Optional: [nvim-spider](https://github.com/chrisgrieser/nvim-spider) and
   [flash.nvim](https://github.com/folke/flash.nvim) for the integrations
 - Optional: Vibrato or Vaporetto CLI + dictionary for the external backends
-  (Vibrato can be installed automatically with `:BunsetsuVibratoSetup`;
-  requires `cargo`/`tar`/`xz`/`curl`)
+  (Vibrato can be installed automatically with `:BunsetsuVibratoSetup` or the
+  `vibrato.auto_setup` option; requires `cargo`/`tar`/`xz`/`curl`)
 
 ## Installation
 
@@ -221,10 +221,11 @@ require("bunsetsu").setup({
     -- == Fine-tuning: performance & external tools ==
     -- Setting vibrato.dict switches the backend to Vibrato:
     -- vibrato = { cmd = "vibrato", dict = "/path/to/system.dic.zst" },
-    -- Or let bunsetsu install Vibrato for you (builds the CLI with cargo and
-    -- downloads a dictionary under stdpath("data")/bunsetsu/vibrato):
-    -- vibrato = { dict = "auto" },              -- ipadic dictionary
-    -- vibrato = { dict = "auto", flavor = "unidic-cwj" },
+    -- Or instruct the download: auto_setup = true builds the CLI with cargo
+    -- and installs a dictionary under stdpath("data")/bunsetsu/vibrato
+    -- (TinySegmenter is used until it finishes):
+    -- vibrato = { auto_setup = true },              -- ipadic dictionary
+    -- vibrato = { auto_setup = true, flavor = "unidic-cwj" },
     -- vibrato.pos = false skips POS/lemma/reading extraction (faster
     -- motions; highlight & lemma become unavailable)
     -- Setting vaporetto.model switches the backend to Vaporetto:
@@ -259,9 +260,9 @@ See [Backends](#backends) for build and download instructions.
   enable; whole-buffer mode, `:BunsetsuSplit`, highlighting and lemma lookup
   then run through it.
 
-  **Automatic setup** — `:BunsetsuVibratoSetup` (or
-  `vibrato = { dict = "auto" }`) builds the CLI and installs a dictionary for
-  you under `stdpath("data")/bunsetsu/vibrato`, then switches the backend.
+  **Automatic setup** — `:BunsetsuVibratoSetup` (or the option
+  `vibrato = { auto_setup = true }`) builds the CLI and installs a dictionary
+  for you under `stdpath("data")/bunsetsu/vibrato`, then switches the backend.
   Requires `cargo`, `tar`, `xz` and `curl` (or `wget`); the first setup takes
   a few minutes while cargo compiles.
 
@@ -277,7 +278,7 @@ See [Backends](#backends) for build and download instructions.
   require("bunsetsu").vibrato_setup({ flavor = "ipadic" })  -- async, with progress
   ```
 
-  `vibrato.flavor` selects the dictionary when using `dict = "auto"`
+  `vibrato.flavor` selects the dictionary when `auto_setup` is enabled
   (`ipadic` (default) / `unidic-mecab` / `unidic-cwj` / `jumandic` /
   `naist-jdic`); `vibrato.version` pins the vibrato tag to build
   (default `v0.5.2`).

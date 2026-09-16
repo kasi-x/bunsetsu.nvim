@@ -83,12 +83,14 @@ highlight        品詞ハイライトの設定テーブル。
 
 vibrato          Vibrato バックエンドの設定テーブル。
                  - cmd: tokenize CLI のパス (省略値: "vibrato")。
-                   dict = "auto" では導入した CLI が自動設定される
-                 - dict: 辞書 (.dic.zst) のパス (空なら Vibrato 無効)。
-                   "auto" で stdpath("data")/bunsetsu/vibrato 配下への
-                   自動セットアップを有効化 (|bunsetsu-vibrato-setup|)。
-                   未導入のときは setup() 時にバックグラウンドで導入され、
-                   完了までの間は TinySegmenter で動作する
+                   auto_setup 有効時は導入した CLI が自動設定される
+                 - dict: 辞書 (.dic.zst) のパス (空なら Vibrato 無効)
+                 - auto_setup: true で自動セットアップを有効化
+                   (|bunsetsu-vibrato-setup|)。CLI のビルドと辞書の
+                   ダウンロードを stdpath("data")/bunsetsu/vibrato 配下へ
+                   行い、cmd / dict をその導入へ差し替える。未導入なら
+                   setup() 時にバックグラウンドで導入され、完了までの間は
+                   TinySegmenter で動作する (省略値: false)
                  - pos: 品詞・原形・読みの抽出 (省略値: true)。
                    false で高速化 (highlight / lemma は使えなくなる)
                  - flavor: 自動セットアップの辞書の種類。
@@ -192,8 +194,8 @@ Vibrato (https://github.com/daac-tools/vibrato) の tokenize CLI で
 導入先は stdpath("data")/bunsetsu/vibrato/ で、完了後に設定へ自動反映され
 バックエンドが切り替わります。flavor / version は vibrato.flavor /
 vibrato.version で設定できます (|bunsetsu-config-tuning|)。
-vibrato.dict = "auto" を設定すると、未導入なら setup() 時に自動実行され、
-導入済みならその導入が使われます。
+vibrato = { auto_setup = true } を設定すると、未導入なら setup() 時に
+自動実行され、導入済みならその導入が使われます。
 
 手動セットアップ:
 
