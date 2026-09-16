@@ -82,10 +82,20 @@ highlight        品詞ハイライトの設定テーブル。
 3.2 調整オプション (性能・外部連携)           *bunsetsu-config-tuning*
 
 vibrato          Vibrato バックエンドの設定テーブル。
-                 - cmd: tokenize CLI のパス (省略値: "vibrato")
-                 - dict: 辞書 (.dic.zst) のパス (空なら Vibrato 無効)
+                 - cmd: tokenize CLI のパス (省略値: "vibrato")。
+                   dict = "auto" では導入した CLI が自動設定される
+                 - dict: 辞書 (.dic.zst) のパス (空なら Vibrato 無効)。
+                   "auto" で stdpath("data")/bunsetsu/vibrato 配下への
+                   自動セットアップを有効化 (|bunsetsu-vibrato-setup|)。
+                   未導入のときは setup() 時にバックグラウンドで導入され、
+                   完了までの間は TinySegmenter で動作する
                  - pos: 品詞・原形・読みの抽出 (省略値: true)。
                    false で高速化 (highlight / lemma は使えなくなる)
+                 - flavor: 自動セットアップの辞書の種類。
+                   "ipadic" (省略値) / "unidic-mecab" / "unidic-cwj" /
+                   "jumandic" / "naist-jdic"
+                 - version: 自動セットアップでビルドする vibrato のタグ
+                   (省略値: "v0.5.2")
 vaporetto        Vaporetto バックエンドの設定テーブル。
                  - cmd: predict CLI のパス (省略値: "predict")
                  - model: モデル (.model.zst) のパス
@@ -167,6 +177,25 @@ TinySegmenter (既定)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Vibrato~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Vibrato (https://github.com/daac-tools/vibrato) の tokenize CLI で
 形態素解析 (単語分割 + 品詞 + 原形 + 読み) を行います。
+
+自動セットアップ                                    *bunsetsu-vibrato-setup*
+次のコマンドで CLI のビルドと辞書の導入を自動実行できます
+(cargo / tar / xz / curl (または wget) が必要。初回は cargo ビルドの
+ため数分かかります): >vim
+    :BunsetsuVibratoSetup             " ipadic 辞書 (小さい。省略値)
+    :BunsetsuVibratoSetup unidic-cwj  " より大きな UniDic 辞書
+    :BunsetsuVibratoSetup!            " 強制再インストール
+<
+>lua
+    require("bunsetsu").vibrato_setup({ flavor = "ipadic" })  -- 非同期
+<
+導入先は stdpath("data")/bunsetsu/vibrato/ で、完了後に設定へ自動反映され
+バックエンドが切り替わります。flavor / version は vibrato.flavor /
+vibrato.version で設定できます (|bunsetsu-config-tuning|)。
+vibrato.dict = "auto" を設定すると、未導入なら setup() 時に自動実行され、
+導入済みならその導入が使われます。
+
+手動セットアップ:
 
 >sh
     git clone https://github.com/daac-tools/vibrato
@@ -302,6 +331,13 @@ setEndpoints に委譲)。
 :[range]BunsetsuSplit                     *:BunsetsuSplit*
     指定行を文節で分かち書きした内容に置換する。文節の間に入れる文字は
     splitsep で設定可能。
+
+:BunsetsuVibratoSetup [!] [flavor]        *:BunsetsuVibratoSetup*
+    Vibrato バックエンドを自動セットアップする (|bunsetsu-vibrato-setup|)。
+    tokenize CLI を cargo でビルドし、辞書を GitHub Releases から
+    stdpath("data")/bunsetsu/vibrato/ へ導入して設定に反映する。
+    flavor は ipadic / unidic-mecab / unidic-cwj / jumandic / naist-jdic。
+    ! で導入済みでも再実行する。
 
 ================================================================================
 9. Lua API                                                *bunsetsu-api*

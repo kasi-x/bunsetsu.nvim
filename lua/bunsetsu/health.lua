@@ -33,9 +33,21 @@ function M.check()
 
   -- トークナイザ確認 (Vibrato 未設定なら同梱 TinySegmenter を使用)
   local config = require("bunsetsu._core.configuration")
+  local vs = require("bunsetsu._commands.vibrato_setup")
   local dict = config.DATA.vibrato.dict
   local cmd = config.DATA.vibrato.cmd or "vibrato"
-  if dict and dict ~= "" then
+  if dict == "auto" then
+    -- resolve_data で解決済みのはずだが、生の "auto" が見えた場合は状態を案内
+    local status = vs.status()
+    if status then
+      vim.health.info('vibrato.dict = "auto": ' .. status)
+    else
+      vim.health.info(
+        'vibrato.dict = "auto": まだ導入されていません。'
+          .. ":BunsetsuVibratoSetup で導入できます (cargo / tar / xz が必要)"
+      )
+    end
+  elseif dict and dict ~= "" then
     if vim.fn.filereadable(dict) == 1 then
       vim.health.ok(("Vibrato 辞書: %s"):format(dict))
     else
@@ -62,6 +74,10 @@ function M.check()
     end
   else
     vim.health.info("Vibrato 未設定 (同梱 TinySegmenter を使用します)")
+    local managed = vs.status()
+    if managed then
+      vim.health.info(managed .. ' — vibrato.dict = "auto" でこの導入を使えます')
+    end
 
     local segment = require("bunsetsu._core.segment")
     local segcols = segment.split_line(config.DATA.model, "これは文章です。")

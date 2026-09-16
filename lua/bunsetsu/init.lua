@@ -22,6 +22,29 @@ function M.setup(opts)
   lifecycle.setup(opts)
 end
 
+---Vibrato バックエンドを自動セットアップする (非同期)。
+---
+---tokenize CLI を cargo でビルドし、辞書を GitHub Releases からダウンロード
+---して stdpath("data")/bunsetsu/vibrato/ 配下へ導入する。完了後、設定を
+---Vibrato バックエンドへ切り替える。必要なコマンド: cargo / tar / xz /
+---curl (または wget)。
+---
+---`:BunsetsuVibratoSetup` コマンド、または `vibrato = { dict = "auto" }`
+---設定でも同じ処理が走る。
+---
+---@param opts? { flavor?: string, version?: string, force?: boolean }
+---   flavor: "ipadic" (既定) / "unidic-mecab" / "unidic-cwj" / "jumandic" /
+---   "naist-jdic"。version: ビルド元の vibrato タグ (既定 "v0.5.2")。
+---   force: 導入済みでも再実行する
+---@return boolean 開始したか (導入済み・実行中・依存不足の場合は false)
+function M.vibrato_setup(opts)
+  local configuration_ = require("bunsetsu._core.configuration")
+  return require("bunsetsu._commands.vibrato_setup").run(
+    opts,
+    configuration_.apply_vibrato_manifest
+  )
+end
+
 ---全文モードの segment 一覧を返す (flash matcher の基盤)。
 ---@return FullSegment[]
 function M.full_segments()

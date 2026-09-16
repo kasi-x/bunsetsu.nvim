@@ -9,9 +9,16 @@
 
 ---@class Bunsetsu.Config.Vibrato
 ---@field cmd string tokenize CLI のパス。既定 "vibrato"
----@field dict string 辞書 (.dic.zst) のパス。空なら Vibrato 無効 (既定)
+---@field dict string 辞書 (.dic.zst) のパス。空なら Vibrato 無効 (既定)。
+---   "auto" で stdpath("data") 配下への自動セットアップ (未導入なら
+---   setup() 時に cargo ビルドと辞書ダウンロードを実行する)
 ---@field pos boolean 品詞・原形・読みの抽出。false で高速化
 ---   (highlight / lemma は使えなくなる)。既定 true
+---@field flavor string 自動セットアップ (dict = "auto") の辞書の種類。
+---   "ipadic" (既定) / "unidic-mecab" / "unidic-cwj" / "jumandic" /
+---   "naist-jdic"
+---@field version string 自動セットアップでビルドする vibrato のタグ。
+---   既定 "v0.5.2"
 
 ---@class Bunsetsu.Config.Vaporetto
 ---@field cmd string predict CLI のパス。既定 "predict"
@@ -76,6 +83,10 @@ local _DEFAULTS = {
     -- 品詞・原形・読みの抽出を有効化 (highlight / lemma に必要)。
     -- false で高速化 (文節移動には影響しない)
     pos = true,
+    -- dict = "auto" で stdpath("data") 配下への自動セットアップを有効化。
+    -- 辞書の種類とビルド元タグ (vibrato_setup.run の既定値)。
+    flavor = "ipadic",
+    version = "v0.5.2",
   },
   vaporetto = {
     cmd = "predict",
@@ -129,7 +140,54 @@ function M.resolve_data(data)
   M.DATA = vim.tbl_deep_extend("force", M.DATA, vim.g.bunsetsu_configuration or {})
   M.DATA = vim.tbl_deep_extend("force", M.DATA, data or {})
 
+  M.resolve_vibrato_auto()
+
   return M.DATA
+end
+
+---dict = "auto" (自動セットアップ) の解決。
+---manifest があれば実パスへ置換し、無ければバックエンドを無効化して
+---セットアップ待ちフラグを立てる (lifecycle.setup が自動実行する)。
+function M.resolve_vibrato_auto()
+  local v = M.DATA.vibrato
+  if not v or v.dict ~= "auto" then
+    M._vibrato_auto_pending = false
+    return
+  end
+  local manifest = require("bunsetsu._commands.vibrato_setup").read_manifest()
+  if manifest then
+    v.cmd, v.dict = manifest.cmd, manifest.dict
+    M._vibrato_auto_pending = false
+  else
+    v.cmd, v.dict = "", ""
+    M._vibrato_auto_pending = true
+  end
+end
+
+---自動セットアップがまだ行われていないか (フラグを消費する)。
+---@return boolean
+function M.consume_auto_setup_needed()
+  local pending = M._vibrato_auto_pending
+  M._vibrato_auto_pending = false
+  return pending == true
+end
+
+---自動セットアップ完了時に manifest のパスを設定へ反映する。
+---(lifecycle.setup の自動実行と bunsetsu.vibrato_setup() の共通処理)
+---@param manifest Bunsetsu.VibratoManifest
+function M.apply_vibrato_manifest(manifest)
+  M.DATA.vibrato.cmd = manifest.cmd
+  M.DATA.vibrato.dict = manifest.dict
+  require("bunsetsu._commands.full").invalidate()
+  vim.notify(
+    "bunsetsu: Vibrato のセットアップが完了しました ("
+      .. manifest.version
+      .. " / "
+      .. manifest.flavor
+      .. ")。バックエンドを切り替えました",
+    vim.log.levels.INFO,
+    { title = "bunsetsu.nvim" }
+  )
 end
 
 ---外部トークナイザ (Vibrato) を使うかどうか。辞書未設定なら TinySegmenter。

@@ -16,6 +16,18 @@ function M.setup(opts)
   configuration.initialize_data_if_needed()
   configuration.resolve_data(opts)
 
+  -- vibrato.dict = "auto" で未導入のときはバックグラウンドでセットアップする
+  -- (cargo ビルドのため数分かかることがある。完了時にバックエンドが切替わる)
+  if configuration.consume_auto_setup_needed() then
+    vim.schedule(function()
+      local data = configuration.DATA.vibrato
+      require("bunsetsu._commands.vibrato_setup").run({
+        flavor = data and data.flavor,
+        version = data and data.version,
+      }, configuration.apply_vibrato_manifest)
+    end)
+  end
+
   local augroup = vim.api.nvim_create_augroup("bunsetsu", { clear = true })
 
   local model_name = full.current_model
