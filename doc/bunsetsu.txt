@@ -89,8 +89,11 @@ vibrato          Vibrato バックエンドの設定テーブル。
                    (|bunsetsu-vibrato-setup|)。CLI のビルドと辞書の
                    ダウンロードを stdpath("data")/bunsetsu/vibrato 配下へ
                    行い、cmd / dict をその導入へ差し替える。未導入なら
-                   setup() 時にバックグラウンドで導入され、完了までの間は
-                   TinySegmenter で動作する (省略値: false)
+                   setup() の auto_setup_delay ms 後にバックグラウンドで
+                   導入され、完了までの間は TinySegmenter で動作する
+                   (省略値: false)
+                 - auto_setup_delay: 自動セットアップの開始を遅らせる時間
+                   (ms)。起動直後の I/O 競合を避ける (省略値: 3000)
                  - pos: 品詞・原形・読みの抽出 (省略値: true)。
                    false で高速化 (highlight / lemma は使えなくなる)
                  - flavor: 自動セットアップの辞書の種類。

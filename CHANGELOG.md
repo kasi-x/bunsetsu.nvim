@@ -13,7 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`:BunsetsuVibratoSetup` / `bunsetsu.vibrato_setup()` /
   `vibrato = { auto_setup = true }`)。tokenize CLI の cargo ビルドと辞書
   (ipadic / unidic-mecab / unidic-cwj / jumandic / naist-jdic) の
-  ダウンロードを stdpath("data") 配下へ行い、完了後にバックエンドへ反映
+  ダウンロードを stdpath("data") 配下へ行い、完了後にバックエンドへ反映。
+  未導入時のセットアップは auto_setup_delay (既定 3 秒) 遅延させて
+  起動と競合しないようにする
 - 設定オプションを目的別の 3 つの層に再編して文書化
   (README と doc/bunsetsu.txt の設定セクション):
   3.1 基本 (バックエンドと見た目) / 3.2 調整 (性能・外部連携) /

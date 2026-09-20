@@ -196,6 +196,11 @@ describe("bunsetsu.vibrato_setup (automatic Vibrato installation)", function()
   end)
 
   describe("vibrato.auto_setup", function()
+    it("defaults to a 3 second delay", function()
+      config.resolve_data({})
+      assert.are.equal(3000, config.DATA.vibrato.auto_setup_delay)
+    end)
+
     it("does nothing when disabled (default)", function()
       config.resolve_data({ vibrato = { dict = "/custom/system.dic.zst" } })
       assert.are.equal("/custom/system.dic.zst", config.DATA.vibrato.dict)
@@ -226,11 +231,18 @@ describe("bunsetsu.vibrato_setup (automatic Vibrato installation)", function()
       assert.is_false(config.consume_auto_setup_needed())
     end)
 
-    it("triggers the setup from bunsetsu.setup() when pending", function()
+    it("does not start before auto_setup_delay elapses", function()
+      local bunsetsu = require("bunsetsu")
+      bunsetsu.setup({ vibrato = { auto_setup = true, auto_setup_delay = 10000 } })
+      vim.wait(100)
+      assert.is_nil(vs._running) -- まだ始まっていない
+    end)
+
+    it("triggers the setup from bunsetsu.setup() after the delay", function()
       make_fake_artifacts("ipadic")
       mock_system_success()
       local bunsetsu = require("bunsetsu")
-      bunsetsu.setup({ vibrato = { auto_setup = true } })
+      bunsetsu.setup({ vibrato = { auto_setup = true, auto_setup_delay = 10 } })
       local ok = vim.wait(2000, function()
         return vim.fn.filereadable(tmp_root .. "/manifest.json") == 1
           and config.DATA.vibrato.dict == tmp_root .. "/dict/system.dic.zst"

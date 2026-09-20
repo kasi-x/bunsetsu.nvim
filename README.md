@@ -223,7 +223,8 @@ require("bunsetsu").setup({
     -- vibrato = { cmd = "vibrato", dict = "/path/to/system.dic.zst" },
     -- Or instruct the download: auto_setup = true builds the CLI with cargo
     -- and installs a dictionary under stdpath("data")/bunsetsu/vibrato
-    -- (TinySegmenter is used until it finishes):
+    -- (TinySegmenter is used until it finishes; the setup starts
+    -- auto_setup_delay ms after startup so it never competes with init):
     -- vibrato = { auto_setup = true },              -- ipadic dictionary
     -- vibrato = { auto_setup = true, flavor = "unidic-cwj" },
     -- vibrato.pos = false skips POS/lemma/reading extraction (faster

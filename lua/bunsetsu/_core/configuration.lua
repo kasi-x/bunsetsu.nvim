@@ -12,8 +12,11 @@
 ---@field dict string 辞書 (.dic.zst) のパス。空なら Vibrato 無効 (既定)
 ---@field auto_setup boolean true で自動セットアップを有効化。CLI の
 ---   cargo ビルドと辞書のダウンロードを stdpath("data")/bunsetsu/vibrato
----   配下へ行い、cmd / dict をその導入へ差し替える。未導入なら setup() 時
----   にバックグラウンドで実行し、完了までの間は TinySegmenter で動作する
+---   配下へ行い、cmd / dict をその導入へ差し替える。未導入なら setup() の
+---   auto_setup_delay ms 後にバックグラウンドで実行し、完了までの間は
+---   TinySegmenter で動作する
+---@field auto_setup_delay number 自動セットアップの開始を遅らせる時間
+---   (ms)。起動直後の I/O と競合しないよう、既定では 3 秒待つ。既定 3000
 ---@field pos boolean 品詞・原形・読みの抽出。false で高速化
 ---   (highlight / lemma は使えなくなる)。既定 true
 ---@field flavor string 自動セットアップ (auto_setup = true) の辞書の種類。
@@ -87,8 +90,10 @@ local _DEFAULTS = {
     pos = true,
     -- true で自動セットアップ: tokenize CLI を cargo でビルドし、辞書を
     -- stdpath("data")/bunsetsu/vibrato 配下へ導入して cmd / dict を差し替える。
-    -- 未導入なら setup() 時にバックグラウンドで実行する
+    -- 未導入なら setup() の auto_setup_delay ms 後にバックグラウンドで実行する
     auto_setup = false,
+    -- 自動セットアップの開始を遅らせる時間 (ms)。起動直後の I/O 競合を避ける
+    auto_setup_delay = 3000,
     -- 自動セットアップの辞書の種類とビルド元タグ
     flavor = "ipadic",
     version = "v0.5.2",
