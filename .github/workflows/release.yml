@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
         if: env.LUAROCKS_API_KEY != ''
       - name: Luarocks Upload
-        uses: nvim-neorocks/luarocks-tag-release@v7
+        uses: nvim-neorocks/luarocks-tag-release@v8
         if: env.LUAROCKS_API_KEY != ''
         with:
           copy_directories: |
